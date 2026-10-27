@@ -22,25 +22,25 @@ Prueben en el navegador: http://localhost:3001/health y http://localhost:3001/us
 
 ## Capas
 
-| Archivo | Capa | Responsabilidad |
-|---|---|---|
-| src/index.js | Arranque | Lee PORT y HOST y pone el servidor a escuchar |
-| src/app.js | Configuración | Middlewares, /health, montaje de rutas, manejo de errores |
-| src/routes/usuarios.routes.js | Presentación | Método HTTP + URI → función del controlador |
-| src/controllers/usuarios.controller.js | Presentación | Lee la petición, llama al servicio, arma la respuesta |
-| src/services/usuarios.service.js | Lógica de negocio | Validaciones y reglas (email único); no conoce HTTP ni la base de datos |
-| src/repositories/usuarios.repository.js | Acceso a datos | Guarda y consulta (en memoria en el Taller 1) |
-| src/models/usuario.js | Modelo | Atributos de la entidad y su validación |
-| src/utils/http-error.js | Utilidad | Error con código de estado HTTP |
+| Archivo                                 | Capa              | Responsabilidad                                                         |
+| --------------------------------------- | ----------------- | ----------------------------------------------------------------------- |
+| src/index.js                            | Arranque          | Lee PORT y HOST y pone el servidor a escuchar                           |
+| src/app.js                              | Configuración     | Middlewares, /health, montaje de rutas, manejo de errores               |
+| src/routes/usuarios.routes.js           | Presentación      | Método HTTP + URI → función del controlador                             |
+| src/controllers/usuarios.controller.js  | Presentación      | Lee la petición, llama al servicio, arma la respuesta                   |
+| src/services/usuarios.service.js        | Lógica de negocio | Validaciones y reglas (email único); no conoce HTTP ni la base de datos |
+| src/repositories/usuarios.repository.js | Acceso a datos    | Guarda y consulta (en memoria en el Taller 1)                           |
+| src/models/usuario.js                   | Modelo            | Atributos de la entidad y su validación                                 |
+| src/utils/http-error.js                 | Utilidad          | Error con código de estado HTTP                                         |
 
 ## Endpoints (Taller 1)
 
-| Método | URI | Respuesta |
-|---|---|---|
-| GET | /health | 200 `{"servicio":"ms-usuarios","estado":"ok"}` |
-| GET | /usuarios | 200 arreglo de usuarios |
-| GET | /usuarios/:id | 200 usuario · 400 id inválido · 404 no existe |
-| POST | /usuarios | 201 usuario creado · 400 datos inválidos · 409 email repetido |
+| Método | URI           | Respuesta                                                     |
+| ------ | ------------- | ------------------------------------------------------------- |
+| GET    | /health       | 200 `{"servicio":"ms-usuarios","estado":"ok"}`                |
+| GET    | /usuarios     | 200 arreglo de usuarios                                       |
+| GET    | /usuarios/:id | 200 usuario · 400 id inválido · 404 no existe                 |
+| POST   | /usuarios     | 201 usuario creado · 400 datos inválidos · 409 email repetido |
 
 Ejemplo de cuerpo para POST:
 `{"nombre": "Marta Ríos", "email": "marta.rios@empresa.com", "rol": "despacho"}`
