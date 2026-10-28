@@ -12,7 +12,7 @@ Aplicación web para la gestión de servicios médicos de MediRed IPS, desarroll
 | Santiago Mejía          | SantiagoMejia064    | ms-citas      |
 | [Nombre del integrante] | [Usuario de GitHub] | ms-pacientes  |
 | [Nombre del integrante] | [Usuario de GitHub] | ms-medicos    |
-| [Nombre del integrante] | [Usuario de GitHub] | ms-historias  |
+| Steven Camilo Franco    | StevenNorduss       | ms-historias  |
 
 ## Microservicios
 
@@ -22,7 +22,7 @@ Aplicación web para la gestión de servicios médicos de MediRed IPS, desarroll
 | ms-pacientes | Pacientes          | [Integrante]   | 3002   | Ninguno                  |
 | ms-medicos   | Médicos            | [Integrante]   | 3003   | Ninguno                  |
 | ms-citas     | Citas médicas      | Santiago Mejía | 3004   | ms-pacientes, ms-medicos |
-| ms-historias | Historias clínicas | [Integrante]   | 3005   | ms-pacientes, ms-medicos |
+| ms-historias | Historias clínicas | Steven Franco  | 3005   | ms-pacientes, ms-medicos |
 
 ## Estructura del repositorio
 
