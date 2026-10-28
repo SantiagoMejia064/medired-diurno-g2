@@ -1,116 +1,67 @@
 # MediRed IPS
 
-### Healthcare Management Platform
+**Jornada:** Diurna  
+**Grupo:** 2
 
-**MediRed IPS** es una plataforma web de gestión médica diseñada para centralizar y optimizar los procesos administrativos y clínicos de una institución prestadora de servicios de salud.
+Aplicación web para la gestión de servicios médicos de MediRed IPS, desarrollada mediante una arquitectura de microservicios REST.
 
-El proyecto propone una solución digital que integra la gestión de pacientes, profesionales de salud, citas médicas e historias clínicas en un entorno unificado, mediante una arquitectura distribuida basada en microservicios.
+## Integrantes
 
-Su enfoque combina desarrollo web, integración de servicios, seguridad y administración de infraestructura para construir un sistema modular, escalable y mantenible.
+| Integrante              | GitHub              | Microservicio |
+| ----------------------- | ------------------- | ------------- |
+| Santiago Mejía          | SantiagoMejia064    | ms-citas      |
+| [Nombre del integrante] | [Usuario de GitHub] | ms-pacientes  |
+| [Nombre del integrante] | [Usuario de GitHub] | ms-medicos    |
+| [Nombre del integrante] | [Usuario de GitHub] | ms-historias  |
 
-## Visión del proyecto
+## Microservicios
 
-Las instituciones de salud requieren herramientas que permitan organizar grandes volúmenes de información, coordinar diferentes áreas y controlar el acceso a datos según las responsabilidades de cada usuario.
+| Carpeta      | Entidad            | Responsable    | Puerto | Depende de               |
+| ------------ | ------------------ | -------------- | ------ | ------------------------ |
+| ms-usuarios  | Usuarios           | Docente        | 3001   | Ninguno                  |
+| ms-pacientes | Pacientes          | [Integrante]   | 3002   | Ninguno                  |
+| ms-medicos   | Médicos            | [Integrante]   | 3003   | Ninguno                  |
+| ms-citas     | Citas médicas      | Santiago Mejía | 3004   | ms-pacientes, ms-medicos |
+| ms-historias | Historias clínicas | [Integrante]   | 3005   | ms-pacientes, ms-medicos |
 
-MediRed busca abordar estas necesidades a través de una plataforma que permita:
+## Estructura del repositorio
 
-- Centralizar la administración de pacientes y profesionales médicos.
-- Gestionar la programación y el seguimiento de citas.
-- Organizar y consultar registros de atención médica.
-- Ofrecer interfaces adaptadas a distintos roles dentro de la institución.
-- Integrar diferentes servicios sin depender de una aplicación monolítica.
-- Mantener una estructura tecnológica que facilite la evolución del sistema.
+```text
+medired-diurno-g2/
+├── README.md
+├── ms-usuarios/       # Gestión de usuarios
+├── ms-pacientes/      # Gestión de pacientes
+├── ms-medicos/        # Gestión de médicos
+├── ms-citas/          # Gestión de citas médicas
+└── ms-historias/      # Gestión de historias clínicas
+```
 
-## Arquitectura del sistema
+Cada microservicio tiene su propia carpeta, código fuente y configuración.
 
-MediRed está concebido bajo una arquitectura de microservicios, donde cada componente administra una parte específica del negocio y se comunica con otros servicios mediante APIs REST.
+## Cómo ejecutar un microservicio
 
-La solución contempla cuatro componentes principales:
+Desde la terminal, ingresar a la carpeta del microservicio correspondiente, por ejemplo:
 
-**Frontend:** interfaz web desde la cual los usuarios acceden a las funcionalidades de acuerdo con su rol.
+```bash
+cd ms-citas
+```
 
-**API Gateway:** punto de entrada centralizado que distribuye las solicitudes del cliente hacia los microservicios correspondientes.
+**1. Instalar dependencias**
 
-**Microservicios:** servicios independientes que encapsulan la lógica de negocio, organizados mediante una arquitectura en capas.
+```bash
+npm install
+```
 
-**Persistencia:** bases de datos MySQL independientes por microservicio, que permiten mantener separadas las responsabilidades y la información de cada entidad.
+**2. Crear el archivo `.env`**
 
-### Servicios previstos
+Copiar el contenido de `.env.example` a un archivo llamado `.env` y verificar el puerto asignado.
 
-| Servicio | Funcionalidad |
-|---|---|
-| `ms-usuarios` | Autenticación, usuarios y permisos |
-| `ms-pacientes` | Gestión de información de pacientes |
-| `ms-medicos` | Administración de profesionales médicos |
-| `ms-citas` | Programación y seguimiento de citas |
-| `ms-historias` | Administración de registros clínicos |
+**3. Iniciar el servicio**
 
-La comunicación entre microservicios permitirá relacionar información de diferentes entidades manteniendo la independencia de sus datos.
+```bash
+npm run dev
+```
 
-## Seguridad y control de acceso
+Para comprobar su funcionamiento, acceder a `http://localhost:3004/health` en el caso de `ms-citas`.
 
-La plataforma contempla autenticación mediante tokens JWT y autorización basada en roles.
-
-Se han definido tres perfiles principales:
-
-- **Administrador:** gestión general de la plataforma.
-- **Admisiones:** administración de pacientes y citas médicas.
-- **Médico:** consulta de citas y gestión de historias clínicas.
-
-Cada operación estará sujeta a validaciones de autenticación y permisos desde el backend.
-
-## Tecnologías
-
-**Backend**
-- Node.js
-- Express.js
-- REST APIs
-- JSON Web Tokens (JWT)
-
-**Base de datos**
-- MySQL
-
-**Infraestructura y servicios**
-- Ubuntu Server
-- Apache2
-- BIND9
-- UFW
-- Vagrant
-- VirtualBox
-
-**Desarrollo y pruebas**
-- Git y GitHub
-- Postman
-- Visual Studio Code
-
-## Infraestructura
-
-El sistema aprovecha una infraestructura Linux virtualizada con dos servidores y funciones diferenciadas.
-
-El primer servidor administra la resolución DNS y alojará las bases de datos de los microservicios.
-
-El segundo servidor alojará la aplicación web, el API Gateway y los servicios que implementan la lógica de negocio.
-
-Apache actuará como servidor del frontend y proxy inverso, proporcionando un único punto de acceso a los diferentes servicios internos.
-
-Esta distribución permite separar las responsabilidades de infraestructura, persistencia y procesamiento de solicitudes.
-
-## Estado del desarrollo
-
-**En desarrollo — Etapa de arquitectura y planificación.**
-
-Actualmente se está estructurando la aplicación, definiendo los contratos de comunicación y preparando el entorno de desarrollo colaborativo.
-
-La implementación de los microservicios, la persistencia, las interfaces de usuario y la integración se realizará progresivamente.
-
-Este repositorio documentará la evolución del sistema, sus decisiones de arquitectura y las funcionalidades implementadas.
-
-## Privacidad de los datos
-
-MediRed IPS es un proyecto de simulación tecnológica. La aplicación utilizará exclusivamente información ficticia para representar procesos médicos y administrativos, sin almacenar datos clínicos reales.
-
----
-
-**MediRed IPS — Healthcare Management Platform**
-
-*Distributed Architecture · REST APIs · Microservices · Web Development*
+Los datos utilizados durante el desarrollo son ficticios.
