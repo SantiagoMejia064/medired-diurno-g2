@@ -4,9 +4,9 @@
 // =====================================================================
 const app = require('./app');
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3002;
 const HOST = process.env.HOST || '127.0.0.1';
 
 app.listen(PORT, HOST, () => {
-  console.log(`ms-usuarios escuchando en http://${HOST}:${PORT}`);
+  console.log(`ms-pacientes escuchando en http://${HOST}:${PORT}`);
 });
