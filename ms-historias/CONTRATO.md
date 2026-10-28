@@ -1,4 +1,4 @@
-# Contrato de ms-historias — Borrador
+# Contrato de ms-historias
 
 Cada registro representa una atención médica de un paciente realizada por un médico.
 
