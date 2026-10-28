@@ -18,6 +18,7 @@ Cada registro representa una atención médica de un paciente realizada por un m
 
 POST /historias
 
+```json
 {
   "paciente_id": 1,
   "medico_id": 2,
@@ -26,6 +27,25 @@ POST /historias
   "diagnostico": "Diagnóstico de ejemplo",
   "tratamiento": "Tratamiento de ejemplo"
 }
+```
+
+## Ejemplo de respuesta en el Taller 1
+
+GET /historias/1 responde con los datos propios del registro:
+
+```json
+{
+  "id": 1,
+  "paciente_id": 1,
+  "medico_id": 2,
+  "fecha": "2026-10-27",
+  "motivo_consulta": "Motivo de consulta de ejemplo",
+  "diagnostico": "Diagnóstico de ejemplo",
+  "tratamiento": "Tratamiento de ejemplo"
+}
+```
+
+POST /historias responde con el mismo formato y un id nuevo asignado por el servicio.
 
 ## Relaciones
 
@@ -34,3 +54,4 @@ medico_id hace referencia a un registro de ms-medicos.
 
 En el Taller 1 se valida el formato de estos identificadores.
 En el Taller 3 se comprobará por REST que los registros referenciados existan.
+```

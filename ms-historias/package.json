@@ -1,7 +1,7 @@
 {
-  "name": "ms-usuarios",
+  "name": "ms-historias",
   "version": "1.0.0",
-  "description": "Microservicio de usuarios (plantilla del Taller 1) - Redes y Servicios Multimedia, Módulo 3",
+  "description": "Microservicio de historias (MediRed) - Redes y Servicios Multimedia, Módulo 3",
   "main": "src/index.js",
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.js",

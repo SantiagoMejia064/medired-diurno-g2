@@ -3,7 +3,7 @@
 // Aquí se registran los middlewares, las rutas y el manejo de errores.
 // =====================================================================
 const express = require('express');
-const usuariosRoutes = require('./routes/usuarios.routes');
+const historiasRoutes = require('./routes/historias.routes');
 
 const app = express();
 
@@ -12,11 +12,11 @@ app.use(express.json());
 
 // Endpoint de salud: permite verificar que el microservicio está vivo
 app.get('/health', (req, res) => {
-  res.json({ servicio: 'ms-usuarios', estado: 'ok' });
+  res.json({ servicio: 'ms-historias', estado: 'ok' });
 });
 
-// Rutas del recurso. Todas las URIs de este microservicio empiezan por /usuarios
-app.use('/usuarios', usuariosRoutes);
+// Rutas del recurso. Todas las URIs de este microservicio empiezan por /historias
+app.use('/historias', historiasRoutes);
 
 // Cualquier otra ruta: 404 Not Found
 app.use((req, res) => {
