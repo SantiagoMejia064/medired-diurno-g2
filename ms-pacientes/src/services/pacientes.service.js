@@ -4,7 +4,7 @@
 // No sabe nada de HTTP (req/res) ni de cómo se guardan los datos.
 // =====================================================================
 const repo = require('../repositories/pacientes.repository');
-const { validarPacientes, construirPaciente } = require('../models/paciente');
+const { validarPaciente, construirPaciente } = require('../models/paciente');
 const HttpError = require('../utils/http-error');
 
 async function listar() {
