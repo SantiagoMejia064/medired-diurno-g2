@@ -15,7 +15,7 @@ function rolesValidos() {
     .filter((r) => r !== '');
 }
 
-const DOCUMENTO_VALIDO = /^\d{6,15}$/;
+const DOCUMENTO_VALIDO = /^\d{6,10}$/;
 const TELEFONO_VALIDO = /^\d{10}$/;
 
 // Valida el formato AAAA-MM-DD, que la fecha exista

@@ -23,8 +23,8 @@ async function crear(datos) {
 
   const paciente = construirPaciente(datos);
 
-  // Regla de negocio: no puede haber dos usuarios con el mismo email
-  // (el email es con lo que se inicia sesión). 409 = Conflict.
+  // Regla de negocio: no puede haber dos pacientes con el mismo documento
+  // (el documento es con lo que se inicia sesión). 409 = Conflict.
   if (await repo.findByDocumento(paciente.documento)) {
     throw new HttpError(409, `Ya existe un paciente con el número de documento: ${paciente.documento}`);
   }
