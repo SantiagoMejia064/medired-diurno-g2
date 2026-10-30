@@ -1,48 +1,90 @@
-# ms-usuarios · Plantilla del Taller 1 (Módulo 3)
+# ms-pacientes · MediRed IPS
 
-Redes y Servicios Multimedia · UAO · Microservicio de **usuarios** de la aplicación,
-con **Node.js + Express** organizado en capas. Es el microservicio común de todos los grupos
-y, en esta versión, la plantilla para construir el suyo: cópienla y adapten **todas** las capas
-a su propia entidad.
+Microservicio REST para la gestión de pacientes de MediRed IPS, desarrollado con Node.js y Express mediante una arquitectura en capas.
 
-Esta es la versión del Taller 1: datos en memoria y tres operaciones. La versión completa
-(MySQL, contraseña cifrada, inicio de sesión y tokens JWT) se entrega en el Taller 3.
+## Instalación y ejecución
 
-## Cómo ejecutarlo
+Desde la carpeta `ms-pacientes`, instalar las dependencias:
 
-Requisitos: Node.js LTS 22 o superior (`node -v`).
-
-```
-npm install                 # descarga Express en node_modules
-copy .env.example .env      # en Windows (en Linux/Mac: cp .env.example .env)
-npm run dev                 # inicia y se reinicia solo al guardar cambios
+```bash
+npm install
 ```
 
-Prueben en el navegador: http://localhost:3001/health y http://localhost:3001/pacientes
+Copiar el archivo `.env.example` y crear uno llamado `.env` con la siguiente configuración:
 
-## Capas
+```env
+PORT=3002
+HOST=127.0.0.1
+```
 
-| Archivo | Capa | Responsabilidad |
+Iniciar el servicio:
+
+```bash
+npm run dev
+```
+
+El microservicio estará disponible en `http://localhost:3002`.
+
+Para comprobar que está funcionando, ingresar a:
+
+`http://localhost:3002/health`
+
+## Arquitectura en capas
+
+| Capa | Archivo | Responsabilidad |
 |---|---|---|
-| src/index.js | Arranque | Lee PORT y HOST y pone el servidor a escuchar |
-| src/app.js | Configuración | Middlewares, /health, montaje de rutas, manejo de errores |
-| src/routes/pacientes.routes.js | Presentación | Método HTTP + URI → función del controlador |
-| src/controllers/pacientes.controller.js | Presentación | Lee la petición, llama al servicio, arma la respuesta |
-| src/services/pacientes.service.js | Lógica de negocio | Validaciones y reglas (número de documento único, fecha de nacimiento con formato AAAA-MM-DD, telefono de 10 dígitos); no conoce HTTP ni la base de datos |
-| src/repositories/pacientes.repository.js | Acceso a datos | Guarda y consulta (en memoria en el Taller 1) |
-| src/models/paciente.js | Modelo | Atributos de la entidad y su validación |
-| src/utils/http-error.js | Utilidad | Error con código de estado HTTP |
+| Arranque | `src/index.js` | Configura el puerto y pone el servidor en funcionamiento. |
+| Configuración | `src/app.js` | Configura Express, las rutas y el manejo de errores. |
+| Rutas | `src/routes/pacientes.routes.js` | Define las rutas disponibles para las peticiones. |
+| Controlador | `src/controllers/pacientes.controller.js` | Recibe las peticiones y devuelve las respuestas HTTP. |
+| Servicio | `src/services/pacientes.service.js` | Realiza las validaciones y aplica las reglas de negocio. |
+| Modelo | `src/models/paciente.js` | Define los datos del paciente y sus validaciones. |
+| Repositorio | `src/repositories/pacientes.repository.js` | Almacena y consulta los pacientes en memoria. |
+| Utilidad | `src/utils/http-error.js` | Permite manejar errores con sus respectivos códigos HTTP. |
 
-## Endpoints (Taller 1)
+## Endpoints
 
-| Método | URI | Respuesta |
+| Método | Ruta | Descripción |
 |---|---|---|
-| GET | /health | 200 `{"servicio":"ms-pacientes","estado":"ok"}` |
-| GET | /pacientes | 200 arreglo de pacientes |
-| GET | /pacientes/:id | 200 paciente · 400 id inválido · 404 no existe |
-| POST | /pacientes | 201 paciente creado · 400 datos inválidos · 409 número de documento repetido |
+| GET | `/health` | Verificar el estado del microservicio. |
+| GET | `/pacientes` | Listar todos los pacientes. |
+| GET | `/pacientes/:id` | Consultar un paciente por su ID. |
+| POST | `/pacientes` | Registrar un nuevo paciente. |
 
-Ejemplo de cuerpo para POST:
-`{ "nombre": "María Fernanda López" , "documento" : "1001234567", fecha_nacimiento: "1995-04-12", "eps": "Sura", "telefono" : "3001234567"}`
+## Ejemplo de creación de un paciente
 
-Los roles válidos se configuran en el archivo .env (`ROLES=administrador,admisiones,medico`).
+**POST `/pacientes`**
+
+Cuerpo de la petición:
+
+```json
+{
+  "nombre": "María Fernanda López",
+  "documento": "1001234567",
+  "fecha_nacimiento": "1995-04-12",
+  "eps": "Sura",
+  "telefono": "3001234567"
+}
+```
+
+Si los datos son correctos, el servicio responde con el código `201 Created` y devuelve el paciente creado junto con su ID, que se genera automáticamente.
+
+## Validaciones y reglas de negocio
+
+- El nombre del paciente es obligatorio y no puede estar vacío.
+- El documento debe contener entre 6 y 15 dígitos numéricos.
+- La fecha de nacimiento debe tener el formato `AAAA-MM-DD`, ser una fecha válida y no puede ser futura.
+- La EPS es obligatoria y no puede estar vacía.
+- El teléfono debe contener exactamente 10 dígitos numéricos.
+- No se permite registrar dos pacientes con el mismo número de documento. Si ya existe, el servicio responde con `409 Conflict`.
+- El ID utilizado para consultar un paciente debe ser un entero positivo.
+- Si el paciente no existe, el servicio responde con `404 Not Found`.
+- Si los datos enviados no cumplen las validaciones, responde con `400 Bad Request`.
+
+## Almacenamiento
+
+En esta primera versión, los pacientes se almacenan temporalmente en memoria y el repositorio cuenta con cinco registros ficticios para realizar pruebas.
+
+Los nuevos pacientes se agregan a esta lista, pero la información se pierde cuando se reinicia el servicio.
+
+En los siguientes talleres se trabajará en la conexión con MySQL para guardar la información de forma permanente y ampliar las operaciones disponibles sobre los pacientes.
