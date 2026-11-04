@@ -30,4 +30,9 @@ async function crear(req, res) {
   res.status(201).location(`${req.baseUrl}/${nuevo.id}`).json(nuevo);
 }
 
-module.exports = { listar, obtener, crear };
+async function actualizar(req, res){
+  const actualizado = await service.actualizar(leerId(req), req.body);
+  res.status(200).json(actualizado);
+}
+
+module.exports = { listar, obtener, crear, actualizar};

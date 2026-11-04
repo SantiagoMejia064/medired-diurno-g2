@@ -32,4 +32,14 @@ async function crear(datos) {
   return repo.create(paciente);
 }
 
-module.exports = { listar, obtener, crear };
+async function actualizar(id, datos){
+  const errores = validarPaciente(datos);
+  if (errores.length > 0) throw new HttpError(400, 'Datos inválidos', errores);
+  const paciente = construirPaciente(datos);
+
+  const actualizado = await repo.update(id, paciente);
+  if (!actualizado) throw new HttpError(`404, No existe el paciente con id ${id}`);
+  return actualizado;
+}
+
+module.exports = { listar, obtener, crear, actualizar};

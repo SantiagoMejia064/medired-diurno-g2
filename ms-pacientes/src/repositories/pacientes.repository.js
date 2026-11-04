@@ -5,6 +5,9 @@
 // En el Taller 2 se reemplaza por MySQL SIN tocar las otras capas.
 // Todas las funciones son async (devuelven promesas) para que el cambio
 // a una base de datos real no obligue a modificar la capa de servicio.
+
+const { validarPaciente, construirPaciente } = require("../models/paciente");
+
 // =====================================================================
 const pacientes = [
   { 
@@ -67,4 +70,12 @@ async function create(paciente) {
   return nuevo;
 }
 
-module.exports = { findAll, findById, findByDocumento, create };
+async function update (id, paciente){
+  const posicion = pacientes.findIndex((p) => p.id === id);
+  if (posicion === -1) return null;   //no existe el repositorio: solo avisa
+  pacientes[posicion] = {id, ...paciente};
+  return pacientes[posicion];
+}
+
+
+module.exports = { findAll, findById, findByDocumento, create, update};
