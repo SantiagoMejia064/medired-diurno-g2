@@ -7,10 +7,7 @@
 const service = require("../services/citas.service");
 const HttpError = require("../utils/http-error");
 
-// -------------------------------------------------------------
-// LEER ID: valida que el identificador de la URL
-// sea un entero positivo.
-// -------------------------------------------------------------
+// El id de la URL debe ser un entero positivo.
 function leerId(req) {
   const id = Number(req.params.id);
 
@@ -21,10 +18,7 @@ function leerId(req) {
   return id;
 }
 
-// -------------------------------------------------------------
-// LISTAR: GET /citas
-// Permite filtrar por estado mediante ?estado=
-// -------------------------------------------------------------
+// Lista las citas con filtro opcional por estado.
 async function listar(req, res) {
   const filtros = { estado: req.query.estado };
   const citas = await service.listar(filtros);
@@ -32,30 +26,21 @@ async function listar(req, res) {
   res.status(200).json(citas);
 }
 
-// -------------------------------------------------------------
-// OBTENER: GET /citas/:id
-// Consulta una cita mediante su identificador.
-// -------------------------------------------------------------
+// Consulta una cita por id y devuelve sus datos.
 async function obtener(req, res) {
   const cita = await service.obtener(leerId(req));
 
   res.status(200).json(cita);
 }
 
-// -------------------------------------------------------------
-// CREAR: POST /citas
-// Registra una nueva cita y devuelve 201 Created.
-// -------------------------------------------------------------
+// Crea una cita y responde con su ubicación y estado 201.
 async function crear(req, res) {
   const nueva = await service.crear(req.body);
 
   res.status(201).location(`${req.baseUrl}/${nueva.id}`).json(nueva);
 }
 
-// -------------------------------------------------------------
-// ACTUALIZAR: PUT /citas/:id
-// Reemplaza los datos de una cita existente.
-// -------------------------------------------------------------
+// Actualiza la cita indicada en la URL y devuelve sus datos.
 async function actualizar(req, res) {
   const id = leerId(req);
 
@@ -64,10 +49,7 @@ async function actualizar(req, res) {
   res.status(200).json(citaActualizada);
 }
 
-// -------------------------------------------------------------
-// ELIMINAR: DELETE /citas/:id
-// Elimina una cita y devuelve 204 sin contenido.
-// -------------------------------------------------------------
+// Elimina la cita indicada y responde sin contenido.
 async function eliminar(req, res) {
   const id = leerId(req);
 

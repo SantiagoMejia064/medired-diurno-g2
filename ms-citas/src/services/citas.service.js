@@ -9,9 +9,7 @@ const repo = require("../repositories/citas.repository");
 const { validarCita, construirCita } = require("../models/cita");
 const HttpError = require("../utils/http-error");
 
-// -------------------------------------------------------------
-// VALIDAR DATOS: comprueba las reglas definidas en el modelo.
-// -------------------------------------------------------------
+// Rechaza los datos que incumplen las validaciones del modelo.
 function validarDatos(datos) {
   const errores = validarCita(datos);
 
@@ -20,13 +18,9 @@ function validarDatos(datos) {
   }
 }
 
-// -------------------------------------------------------------
-// VALIDAR DISPONIBILIDAD: comprueba si el médico tiene
-// otra cita activa en la misma fecha y hora.
-// excluirId permite ignorar la propia cita durante un PUT.
-// -------------------------------------------------------------
+// Verifica que el médico no tenga otra cita en el mismo horario.
 async function validarDisponibilidad(cita, excluirId = null) {
-  // Las citas canceladas no ocupan horarios, o sea que al estar cancelada no interfiere con las demás.
+  // Las citas canceladas no ocupan horarios.
   if (cita.estado === "cancelada") {
     return;
   }
@@ -45,16 +39,12 @@ async function validarDisponibilidad(cita, excluirId = null) {
   }
 }
 
-// -------------------------------------------------------------
-// LISTAR: obtiene las citas aplicando filtros opcionales.
-// -------------------------------------------------------------
+// Consulta las citas aplicando los filtros recibidos.
 async function listar(filtros = {}) {
   return repo.findAll(filtros);
 }
 
-// -------------------------------------------------------------
-// OBTENER: consulta una cita por ID.
-// -------------------------------------------------------------
+// Busca una cita por id o informa que no existe.
 async function obtener(id) {
   const cita = await repo.findById(id);
 
@@ -65,9 +55,7 @@ async function obtener(id) {
   return cita;
 }
 
-// -------------------------------------------------------------
-// CREAR: valida datos y disponibilidad antes de guardar.
-// -------------------------------------------------------------
+// Valida los datos y la disponibilidad antes de guardar la cita.
 async function crear(datos) {
   validarDatos(datos);
 
@@ -78,15 +66,10 @@ async function crear(datos) {
   return repo.create(cita);
 }
 
-// -------------------------------------------------------------
-// ACTUALIZAR: verifica existencia, valida datos y comprueba
-// conflictos con otras citas antes de reemplazar el registro.
-// -------------------------------------------------------------
+// Verifica existencia, datos y disponibilidad antes de reemplazar la cita.
 async function actualizar(id, datos) {
-  // Comprobar que la cita exista.
   await obtener(id);
 
-  // Aplicar las mismas validaciones del POST.
   validarDatos(datos);
 
   const cita = construirCita(datos);
@@ -97,9 +80,7 @@ async function actualizar(id, datos) {
   return repo.update(id, cita);
 }
 
-// -------------------------------------------------------------
-// ELIMINAR: elimina la cita o informa que no existe.
-// -------------------------------------------------------------
+// Elimina la cita o informa que no existe.
 async function eliminar(id) {
   const eliminado = await repo.remove(id);
 

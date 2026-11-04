@@ -34,9 +34,7 @@ const citas = [
 
 let siguienteId = 4;
 
-// -------------------------------------------------------------
-// LISTAR: obtiene todas las citas o filtra por estado.
-// -------------------------------------------------------------
+// Devuelve copias de las citas con filtro opcional por estado.
 async function findAll(filtros = {}) {
   let resultado = citas;
 
@@ -47,28 +45,21 @@ async function findAll(filtros = {}) {
   return resultado.map((cita) => ({ ...cita }));
 }
 
-// -------------------------------------------------------------
-// OBTENER: busca una cita por su identificador.
-// -------------------------------------------------------------
+// Devuelve una copia de la cita o null si no existe.
 async function findById(id) {
   const cita = citas.find((cita) => cita.id === id);
   return cita ? { ...cita } : null;
 }
 
-// -------------------------------------------------------------
-// CREAR: registra una cita y genera su identificador.
-// -------------------------------------------------------------
+// Guarda la cita con un identificador consecutivo.
 async function create(cita) {
   const nueva = { ...cita, id: siguienteId++ };
   citas.push(nueva);
   return { ...nueva };
 }
 
-// -------------------------------------------------------------
-// BUSCAR CONFLICTO: verifica si un médico tiene ocupado
-// un horario con una cita programada o atendida.
-// excluirId permite ignorar la propia cita durante un PUT.
-// -------------------------------------------------------------
+// Las citas programadas o atendidas ocupan el horario del médico.
+// excluirId omite la propia cita al actualizar.
 async function findByMedicoYFecha(medicoId, fechaHora, excluirId = null) {
   const cita = citas.find(
     (cita) =>
@@ -81,9 +72,7 @@ async function findByMedicoYFecha(medicoId, fechaHora, excluirId = null) {
   return cita ? { ...cita } : null;
 }
 
-// -------------------------------------------------------------
-// ACTUALIZAR: reemplaza los datos de una cita existente.
-// -------------------------------------------------------------
+// Reemplaza los datos conservando el id o devuelve null si no existe.
 async function update(id, datos) {
   const indice = citas.findIndex((cita) => cita.id === id);
 
@@ -96,9 +85,7 @@ async function update(id, datos) {
   return { ...citas[indice] };
 }
 
-// -------------------------------------------------------------
-// ELIMINAR: elimina una cita por su identificador.
-// -------------------------------------------------------------
+// Elimina la cita y devuelve si se encontró el registro.
 async function remove(id) {
   const indice = citas.findIndex((cita) => cita.id === id);
 

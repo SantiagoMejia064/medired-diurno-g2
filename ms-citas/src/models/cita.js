@@ -8,8 +8,7 @@ const ESTADOS_VALIDOS = ["programada", "atendida", "cancelada"];
 const SEDES_VALIDAS = ["Bogotá", "Cali", "Medellín"];
 const FORMATO_FECHA_HORA = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 
-// Convierte una fecha válida del contrato a un objeto Date.
-// Devuelve null si el formato o la fecha son incorrectos.
+// Convierte la fecha a Date o devuelve null si no es válida.
 function interpretarFechaHora(valor) {
   if (typeof valor !== "string") return null;
 
@@ -34,7 +33,7 @@ function interpretarFechaHora(valor) {
   return fecha;
 }
 
-// Devuelve una lista de errores de validación.
+// Comprueba los datos de la cita y reúne los errores de validación.
 function validarCita(datos) {
   const errores = [];
 
@@ -42,17 +41,15 @@ function validarCita(datos) {
     return ["Se esperaba un objeto JSON con los datos de la cita"];
   }
 
-  // Validar paciente
   if (!Number.isInteger(datos.paciente_id) || datos.paciente_id <= 0) {
     errores.push("paciente_id debe ser un entero positivo");
   }
 
-  // Validar médico
   if (!Number.isInteger(datos.medico_id) || datos.medico_id <= 0) {
     errores.push("medico_id debe ser un entero positivo");
   }
 
-  // Validar fecha y hora
+  // La fecha debe ser válida y estar en el futuro.
   const fecha = interpretarFechaHora(datos.fecha_hora);
 
   if (!fecha) {
@@ -63,12 +60,11 @@ function validarCita(datos) {
     errores.push("fecha_hora debe ser una fecha y hora futura");
   }
 
-  // Validar sede
   if (!SEDES_VALIDAS.includes(datos.sede)) {
     errores.push(`sede debe ser una de: ${SEDES_VALIDAS.join(", ")}`);
   }
 
-  // Validar estado
+  // El estado es opcional; si se indica, debe estar permitido.
   if (datos.estado !== undefined && !ESTADOS_VALIDOS.includes(datos.estado)) {
     errores.push(`estado debe ser uno de: ${ESTADOS_VALIDOS.join(", ")}`);
   }
