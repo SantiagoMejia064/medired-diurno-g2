@@ -1,107 +1,140 @@
 // =====================================================================
 // CAPA DE ACCESO A DATOS (repositorio)
 // Gestiona el almacenamiento y consulta de las citas médicas.
-// Taller 2: versión temporal en memoria con CRUD completo.
-// Posteriormente se reemplazará el almacenamiento por MySQL.
 // =====================================================================
 
-const citas = [
-  {
-    id: 1,
-    paciente_id: 1,
-    medico_id: 2,
-    fecha_hora: "2026-11-03T09:00",
-    sede: "Cali",
-    estado: "programada",
-  },
-  {
-    id: 2,
-    paciente_id: 2,
-    medico_id: 1,
-    fecha_hora: "2026-11-03T10:30",
-    sede: "Bogotá",
-    estado: "programada",
-  },
-  {
-    id: 3,
-    paciente_id: 3,
-    medico_id: 3,
-    fecha_hora: "2026-11-04T14:00",
-    sede: "Medellín",
-    estado: "atendida",
-  },
-];
+const pool = require("../db");
 
-let siguienteId = 4;
+// Convierte una fila de MySQL al formato utilizado por la API.
+function mapearCita(fila) {
+  if (!fila) return null;
 
-// Devuelve copias de las citas con filtro opcional por estado.
+  return {
+    id: fila.id,
+    paciente_id: fila.paciente_id,
+    medico_id: fila.medico_id,
+    fecha_hora: fila.fecha_hora.replace(" ", "T").slice(0, 16),
+    sede: fila.sede,
+    estado: fila.estado,
+  };
+}
+
+// Convierte la fecha de la API al formato DATETIME de MySQL.
+function fechaParaMySQL(fechaHora) {
+  return fechaHora.replace("T", " ") + ":00";
+}
+
+// Lista las citas y permite filtrarlas por estado.
 async function findAll(filtros = {}) {
-  let resultado = citas;
+  let sql = "SELECT * FROM citas";
+  const valores = [];
 
   if (filtros.estado) {
-    resultado = resultado.filter((cita) => cita.estado === filtros.estado);
+    sql += " WHERE estado = ?";
+    valores.push(filtros.estado);
   }
 
-  return resultado.map((cita) => ({ ...cita }));
+  sql += " ORDER BY id";
+
+  const [filas] = await pool.execute(sql, valores);
+  return filas.map(mapearCita);
 }
 
-// Devuelve una copia de la cita o null si no existe.
+// Busca una cita por su identificador.
 async function findById(id) {
-  const cita = citas.find((cita) => cita.id === id);
-  return cita ? { ...cita } : null;
+  const [filas] = await pool.execute("SELECT * FROM citas WHERE id = ?", [id]);
+
+  return mapearCita(filas[0]);
 }
 
-// Guarda la cita con un identificador consecutivo.
+// Crea una cita y devuelve el registro almacenado.
 async function create(cita) {
-  const nueva = { ...cita, id: siguienteId++ };
-  citas.push(nueva);
-  return { ...nueva };
+  const sql = `
+    INSERT INTO citas
+      (paciente_id, medico_id, fecha_hora, sede, estado)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  const valores = [
+    cita.paciente_id,
+    cita.medico_id,
+    fechaParaMySQL(cita.fecha_hora),
+    cita.sede,
+    cita.estado,
+  ];
+
+  const [resultado] = await pool.execute(sql, valores);
+
+  return findById(resultado.insertId);
 }
 
-// Las citas programadas o atendidas ocupan el horario del médico.
-// excluirId omite la propia cita al actualizar.
-async function findByMedicoYFecha(medicoId, fechaHora, excluirId = null) {
-  const cita = citas.find(
-    (cita) =>
-      cita.medico_id === medicoId &&
-      cita.fecha_hora === fechaHora &&
-      (cita.estado === "programada" || cita.estado === "atendida") &&
-      cita.id !== excluirId,
-  );
-
-  return cita ? { ...cita } : null;
-}
-
-// Reemplaza los datos conservando el id o devuelve null si no existe.
+// Actualiza una cita existente conservando su identificador.
 async function update(id, datos) {
-  const indice = citas.findIndex((cita) => cita.id === id);
+  const sql = `
+    UPDATE citas
+    SET paciente_id = ?,
+        medico_id = ?,
+        fecha_hora = ?,
+        sede = ?,
+        estado = ?
+    WHERE id = ?
+  `;
 
-  if (indice === -1) {
+  const valores = [
+    datos.paciente_id,
+    datos.medico_id,
+    fechaParaMySQL(datos.fecha_hora),
+    datos.sede,
+    datos.estado,
+    id,
+  ];
+
+  const [resultado] = await pool.execute(sql, valores);
+
+  if (resultado.affectedRows === 0) {
     return null;
   }
 
-  citas[indice] = { ...datos, id };
-
-  return { ...citas[indice] };
+  return findById(id);
 }
 
-// Elimina la cita y devuelve si se encontró el registro.
+// Elimina una cita e indica si existía.
 async function remove(id) {
-  const indice = citas.findIndex((cita) => cita.id === id);
+  const [resultado] = await pool.execute("DELETE FROM citas WHERE id = ?", [
+    id,
+  ]);
 
-  if (indice === -1) {
-    return false;
+  return resultado.affectedRows > 0;
+}
+
+// Busca conflictos de horario, excluyendo la cita que se edita.
+async function findByMedicoYFecha(medicoId, fechaHora, excluirId = null) {
+  let sql = `
+    SELECT * FROM citas
+    WHERE medico_id = ?
+      AND fecha_hora = ?
+      AND estado <> 'cancelada'
+  `;
+
+  const valores = [medicoId, fechaParaMySQL(fechaHora)];
+
+  if (excluirId !== null) {
+    sql += " AND id <> ?";
+    valores.push(excluirId);
   }
 
-  citas.splice(indice, 1);
-  return true;
+  sql += " LIMIT 1";
+
+  const [filas] = await pool.execute(sql, valores);
+
+  return mapearCita(filas[0]);
 }
 
 module.exports = {
   findAll,
   findById,
   create,
-  findByMedicoYFecha,
   update,
   remove,
+  findByMedicoYFecha,
 };
