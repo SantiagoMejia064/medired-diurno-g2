@@ -64,4 +64,15 @@ async function update(id, historia) {
   return actualizada;
 }
 
-module.exports = { findAll, findById, create, update };
+async function remove(id) {
+  const indice = historias.findIndex((registro) => registro.id === id);
+
+  if (indice === -1) {
+    return false;
+  }
+
+  historias.splice(indice, 1);
+  return true;
+}
+
+module.exports = { findAll, findById, create, update, remove };

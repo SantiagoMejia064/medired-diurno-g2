@@ -42,4 +42,12 @@ async function actualizar(id, datos) {
   return actualizada;
 }
 
-module.exports = { listar, obtener, crear, actualizar };
+async function eliminar(id) {
+  const eliminado = await repo.remove(id);
+
+  if (!eliminado) {
+    throw new HttpError(404, `No existe la historia con id ${id}`);
+  }
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar };

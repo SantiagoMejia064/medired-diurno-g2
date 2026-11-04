@@ -40,4 +40,11 @@ async function actualizar(req, res) {
   res.status(200).json(actualizada);
 }
 
-module.exports = { listar, obtener, crear, actualizar };
+// DELETE /historias/:id
+async function eliminar(req, res) {
+  await service.eliminar(leerId(req));
+
+  res.status(204).end();
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar };
