@@ -37,7 +37,13 @@ const historias = [
 ];
 let siguienteId = 4;
 
-async function findAll() {
+async function findAll(filtros = {}) {
+  if (filtros.paciente_id !== undefined) {
+    return historias.filter(
+      (historia) => historia.paciente_id === filtros.paciente_id
+    );
+  }
+
   return historias;
 }
 
