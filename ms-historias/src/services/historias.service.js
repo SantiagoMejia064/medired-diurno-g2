@@ -25,4 +25,21 @@ async function crear(datos) {
   return repo.create(historia);
 }
 
-module.exports = { listar, obtener, crear };
+async function actualizar(id, datos) {
+  const errores = validarHistoria(datos);
+
+  if (errores.length > 0) {
+    throw new HttpError(400, 'Datos inválidos', errores);
+  }
+
+  const historia = construirHistoria(datos);
+  const actualizada = await repo.update(id, historia);
+
+  if (!actualizada) {
+    throw new HttpError(404, `No existe la historia con id ${id}`);
+  }
+
+  return actualizada;
+}
+
+module.exports = { listar, obtener, crear, actualizar };

@@ -13,4 +13,6 @@ router.post('/', controller.crear);      // crear un historias
 
 // Taller 2: agregar PUT /:id (actualizar) y DELETE /:id (eliminar)
 
+router.put('/:id', controller.actualizar); // actualizar un historias por id
+
 module.exports = router;
