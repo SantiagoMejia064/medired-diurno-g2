@@ -32,8 +32,10 @@ const medicos = [
 let siguienteId = 4;
 
 // Obtener todos los médicos
-async function findAll() {
-  return medicos;
+async function findAll(filtros = {}) {
+  return medicos.filter((m) =>
+    (!filtros.ids || filtros.ids.includes(m.id))
+  );
 }
 
 // Buscar un médico por su ID
@@ -55,9 +57,27 @@ async function create(medico) {
   return nuevo;
 }
 
+async function update(id, medico) {
+  const posicion = medicos.findIndex((m) => m.id === id);
+  if (posicion === -1) return null;
+
+  medicos[posicion] = { id, ...medico };
+  return medicos[posicion];
+}
+
+async function remove(id) {
+  const posicion = medicos.findIndex((m) => m.id === id);
+  if (posicion === -1) return false;
+
+  medicos.splice(posicion, 1);
+  return true;
+}
+
 module.exports = {
   findAll,
   findById,
   findByRegistroMedico,
-  create
+  create,
+  update,
+  remove
 };
