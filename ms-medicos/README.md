@@ -1,63 +1,79 @@
-# ms-medicos — MediRed IPS
+# ms-medicos · Contrato de la API
 
-## Descripción
-Microservicio desarrollado para el Módulo 3 de Redes y Servicios Multimedia. Permite registrar, listar y consultar médicos de MediRed IPS mediante una API REST.
+Microservicio de gestión de médicos de MediRed IPS. Responsable: Jean Carlo Caicedo Chantre. Puerto: **3003**.
 
-## Tecnologías
-- Node.js
-- Express
-- JavaScript
-- Postman
+## Cómo ejecutarlo
 
-## Arquitectura
-El microservicio está organizado en capas:
+Requisitos: Node.js, npm y MySQL/MariaDB.
 
-- **Routes:** define las rutas HTTP.
-- **Controllers:** procesa peticiones y respuestas.
-- **Services:** aplica las reglas de negocio.
-- **Models:** valida los datos.
-- **Repositories:** almacena los médicos en memoria.
+1. Crear la base de datos y su usuario (como administrador):
 
-## Instalación
-
-```bash
-npm install
+```sql
+CREATE DATABASE medicos_db;
+CREATE USER 'medicos_user'@'localhost' IDENTIFIED BY 'una-clave-segura';
+GRANT ALL PRIVILEGES ON medicos_db.* TO 'medicos_user'@'localhost';
 ```
 
-Crear el archivo `.env` con:
+2. Crear la tabla: ingresar con `mysql -u medicos_user -p medicos_db` y ejecutar `SOURCE db/schema.sql;`.
+3. Ejecutar `npm install`.
+4. Copiar `.env.example` como `.env` y configurar los datos de conexión. Ajustar `DB_PORT` al puerto local de MySQL (3309 en el entorno de desarrollo).
+5. Ejecutar `npm run dev`.
 
-```env
-PORT=3003
-HOST=127.0.0.1
+## Representación
+
+```json
+{
+  "id": 1,
+  "nombre": "Carlos Ramírez",
+  "registro_medico": "RM-001",
+  "especialidad": "Cardiología",
+  "sede": "Cali"
+}
 ```
 
-Ejecutar:
+## Atributos
 
-```bash
-npm run dev
-```
+| Atributo | Tipo | ¿Obligatorio al crear? | Reglas |
+|---|---|---|---|
+| id | entero | No, lo asigna MySQL | Positivo y único |
+| nombre | texto | Sí | No vacío |
+| registro_medico | texto | Sí | Único (409) |
+| especialidad | texto | Sí | No vacía |
+| sede | texto | Sí | Cali, Bogotá o Medellín |
 
 ## Endpoints
 
-| Método | Ruta | Función |
-|---|---|---|
-| GET | `/health` | Estado del servicio |
-| GET | `/medicos` | Listar médicos |
-| GET | `/medicos/:id` | Buscar médico |
-| POST | `/medicos` | Registrar médico |
+| Operación | Método | URI | Respuesta exitosa | Errores |
+|---|---|---|---|---|
+| Listar | GET | `/medicos` | 200 arreglo | — |
+| Filtrar | GET | `/medicos?especialidad=Cardiología` | 200 arreglo | — |
+| Consultar por lotes | GET | `/medicos?ids=1,3` | 200 arreglo | 400 |
+| Obtener | GET | `/medicos/:id` | 200 objeto | 400 · 404 |
+| Crear | POST | `/medicos` | 201 objeto + Location | 400 · 409 |
+| Actualizar | PUT | `/medicos/:id` | 200 objeto | 400 · 404 · 409 |
+| Eliminar | DELETE | `/medicos/:id` | 204 | 400 · 404 |
 
-## Datos del médico
-`id`, `nombre`, `registro_medico`, `especialidad`, `sede`.
+**Ejemplo para crear:**
 
-## Validaciones
-- Campos obligatorios.
-- Registro médico único.
-- Sedes permitidas: Cali, Bogotá y Medellín.
-- Manejo de errores 400, 404 y 409.
+```json
+{
+  "nombre": "Coutinho Dos Santos",
+  "registro_medico": "RM-004",
+  "especialidad": "Neurología",
+  "sede": "Medellín"
+}
+```
 
-## Estado
-**Taller 1:** API REST con datos almacenados en memoria. En el Taller 2 se implementará MySQL.
+**Errores:** `{"error":"mensaje","detalles":["..."]}` (detalles únicamente en errores de validación).
 
-**Empresa:** MediRed IPS  
-**Microservicio:** ms-medicos  
-**Puerto:** 3003
+## Relaciones
+
+**Consulta a:** ninguno. El microservicio administra su propia entidad y base de datos.
+
+**Me consultan:** `ms-citas`, para verificar la existencia de un médico mediante `GET /medicos/:id` y recuperar información mediante `GET /medicos?ids=1,3`.
+
+Campos proporcionados: `id`, `nombre`, `registro_medico`, `especialidad` y `sede`.
+
+## Pruebas
+
+Colección de Postman en `docs/ms-medicos.postman_collection.json` (13 validaciones)
