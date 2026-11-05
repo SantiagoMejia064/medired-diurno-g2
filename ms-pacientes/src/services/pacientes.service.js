@@ -37,6 +37,11 @@ async function actualizar(id, datos){
   if (errores.length > 0) throw new HttpError(400, 'Datos inválidos', errores);
   const paciente = construirPaciente(datos);
 
+  //misma regla del documento, pero el paciente si puede conservar su propio documento
+  const otro = await repo.findByDocumento(paciente.documento);
+  if(otro && otro.id !== id){
+    throw new HttpError(409, `Ya existe un paciente con el documento ${paciente.documento}`);
+  }
   const actualizado = await repo.update(id, paciente);
   if (!actualizado) throw new HttpError(404, `No existe el paciente con id ${id}`);
   return actualizado;
@@ -44,7 +49,7 @@ async function actualizar(id, datos){
 
 async function eliminar(id){
   const eliminado = await repo.remove(id);
-  if (!eliminado) throw new HttpError(404, `No existe el usuario con id ${id}`)
+  if (!eliminado) throw new HttpError(404, `No existe el paciente con id ${id}`)
 }
 
 module.exports = { listar, obtener, crear, actualizar, eliminar };
