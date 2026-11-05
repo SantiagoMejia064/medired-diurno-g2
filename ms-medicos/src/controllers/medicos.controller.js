@@ -17,7 +17,9 @@ function leerId(req) {
 
 // GET /medicos
 async function listar(req, res) {
-  const filtros = {};
+  const filtros = {
+    especialidad: req.query.especialidad
+  };
 
   if (req.query.ids) {
     filtros.ids = String(req.query.ids).split(',').map(Number);
