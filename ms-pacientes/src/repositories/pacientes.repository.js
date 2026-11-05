@@ -1,90 +1,231 @@
-// =====================================================================
-// CAPA DE ACCESO A DATOS (repositorio)
-// Única capa que sabe DÓNDE se guardan los datos.
-// Versión del Taller 1: datos en memoria (se pierden al reiniciar).
-// En el Taller 2 se reemplaza por MySQL SIN tocar las otras capas.
-// Todas las funciones son async (devuelven promesas) para que el cambio
-// a una base de datos real no obligue a modificar la capa de servicio.
 
-const { validarPaciente, construirPaciente } = require("../models/paciente");
+ // =====================================================================
+ // CAPA DE ACCESO A DATOS (REPOSITORIO)
+ // Microservicio: ms-pacientes
+ // Base de datos: pacientes_db
+ // Tabla: pacientes
+ //
+ // Esta capa se encarga de ejecutar las consultas SQL en MariaDB.
+ // =====================================================================
+
+const pool = require('../db');
 
 // =====================================================================
-const pacientes = [
-  { 
-    id: 1, 
-    nombre: 'María Fernanda López', 
-    documento: '1001234567', 
-    fecha_nacimiento: '1995-04-12', 
-    eps: 'Sura', 
-    telefono: '3001234567'
-  },
-  { 
-    id: 2, 
-    nombre: 'Carlos Andrés Ramírez',
-    documento: '1023456789', 
-    fecha_nacimiento: '1988-09-25', 
-    eps: 'Sanitas', 
-    telefono: '3109876543'
-  },
-  { 
-    id: 3, 
-    nombre: 'Laura Camila Torres', 
-    documento: '1145678901', 
-    fecha_nacimiento: '2001-01-18', 
-    eps: 'Nueva EPS', 
-    telefono: '3154567890'
-  },
-  { 
-    id: 4, 
-    nombre: 'Juan David Castillo', 
-    documento: '945678123', 
-    fecha_nacimiento: '1979-11-03', 
-    eps: 'Coosalud', 
-    telefono: '3206543210'
-  },
-  { id: 5, 
-    nombre: 'Valentina Herrera', 
-    documento: '1112345678', 
-    fecha_nacimiento: '1998-07-21', 
-    eps: 'Famisanar', 
-    telefono: '3017894562'
-  }
-];
-let siguienteId = 6;
+// CONVERTIR FILA DE LA BASE DE DATOS A OBJETO PACIENTE
+// =====================================================================
+
+function aPaciente(fila) {
+  if (!fila) return null;
+
+  return {
+    id: fila.id,
+    nombre: fila.nombre,
+    documento: fila.documento,
+    fecha_nacimiento: fila.fecha_nacimiento,
+    eps: fila.eps,
+    telefono: fila.telefono
+  };
+}
+
+// =====================================================================
+// CONSULTAR TODOS LOS PACIENTES
+// Permite filtrar por EPS y por IDs.
+// =====================================================================
 
 async function findAll(filtros = {}) {
-  return pacientes.filter((p) =>
-    (!filtros.eps || p.eps === filtros.eps) &&
-    (!filtros.ids || filtros.ids.includes(p.id)));
+  let sql = 'SELECT * FROM pacientes';
+
+  const condiciones = [];
+  const valores = [];
+
+  // Filtrar pacientes por EPS
+  if (filtros.eps) {
+    condiciones.push('eps = ?');
+    valores.push(filtros.eps);
+  }
+
+  // Filtrar pacientes por una lista de IDs
+  if (filtros.ids) {
+    if (filtros.ids.length === 0) {
+      return [];
+    }
+
+    const marcadores = filtros.ids.map(() => '?').join(', ');
+
+    condiciones.push(`id IN (${marcadores})`);
+    valores.push(...filtros.ids);
+  }
+
+  // Agregar condiciones a la consulta
+  if (condiciones.length > 0) {
+    sql += ' WHERE ' + condiciones.join(' AND ');
+  }
+
+  sql += ' ORDER BY id';
+
+  const [filas] = await pool.query(sql, valores);
+
+  return filas.map(aPaciente);
 }
+
+// =====================================================================
+// BUSCAR UN PACIENTE POR ID
+// =====================================================================
 
 async function findById(id) {
-  return pacientes.find((p) => p.id === id) || null;
+  const [filas] = await pool.query(
+    'SELECT * FROM pacientes WHERE id = ?',
+    [id]
+  );
+
+  if (filas.length === 0) {
+    return null;
+  }
+
+  return aPaciente(filas[0]);
 }
+
+// =====================================================================
+// BUSCAR UN PACIENTE POR DOCUMENTO
+// =====================================================================
 
 async function findByDocumento(documento) {
-  return pacientes.find((p) => p.documento === documento) || null;
+  const [filas] = await pool.query(
+    'SELECT * FROM pacientes WHERE documento = ?',
+    [documento]
+  );
+
+  if (filas.length === 0) {
+    return null;
+  }
+
+  return aPaciente(filas[0]);
 }
+
+// =====================================================================
+// REGISTRAR UN PACIENTE
+// =====================================================================
 
 async function create(paciente) {
-  const nuevo = { id: siguienteId++, ...paciente };
-  pacientes.push(nuevo);
-  return nuevo;
+  try {
+    const [resultado] = await pool.query(
+      `INSERT INTO pacientes
+      (nombre, documento, fecha_nacimiento, eps, telefono)
+      VALUES (?, ?, ?, ?, ?)`,
+      [
+        paciente.nombre,
+        paciente.documento,
+        paciente.fecha_nacimiento,
+        paciente.eps,
+        paciente.telefono
+      ]
+    );
+
+    return await findById(resultado.insertId);
+
+  } catch (error) {
+
+    // Verificar si el documento ya está registrado
+    if (error.code === 'ER_DUP_ENTRY') {
+      const duplicado = new Error(
+        'Ya existe un paciente registrado con ese número de documento.'
+      );
+
+      duplicado.statusCode = 409;
+      throw duplicado;
+    }
+
+    throw error;
+  }
 }
 
-async function update (id, paciente){
-  const posicion = pacientes.findIndex((p) => p.id === id);
-  if (posicion === -1) return null;   //no existe el repositorio: solo avisa
-  pacientes[posicion] = {id, ...paciente};
-  return pacientes[posicion];
+// =====================================================================
+// ACTUALIZAR UN PACIENTE
+// =====================================================================
+
+async function update(id, paciente) {
+
+  // Verificar si el paciente existe
+  const existente = await findById(id);
+
+  if (!existente) {
+    const error = new Error(
+      `No se puede actualizar el paciente porque no existe un registro con el ID ${id}.`
+    );
+
+    error.statusCode = 404;
+    throw error;
+  }
+
+  try {
+    await pool.query(
+      `UPDATE pacientes
+       SET nombre = ?,
+           documento = ?,
+           fecha_nacimiento = ?,
+           eps = ?,
+           telefono = ?
+       WHERE id = ?`,
+      [
+        paciente.nombre,
+        paciente.documento,
+        paciente.fecha_nacimiento,
+        paciente.eps,
+        paciente.telefono,
+        id
+      ]
+    );
+
+    return await findById(id);
+
+  } catch (error) {
+
+    // Verificar si el documento pertenece a otro paciente
+    if (error.code === 'ER_DUP_ENTRY') {
+      const duplicado = new Error(
+        'No se puede actualizar el paciente porque ese documento ya pertenece a otro paciente.'
+      );
+
+      duplicado.statusCode = 409;
+      throw duplicado;
+    }
+
+    throw error;
+  }
 }
 
-async function remove(id){
-  const posicion = pacientes.findIndex((p) => p.id === id);
-  if (posicion === -1) return false;
-  pacientes.splice(posicion, 1);
-  return true; 
+// =====================================================================
+// ELIMINAR UN PACIENTE
+// =====================================================================
+
+async function remove(id) {
+  const [resultado] = await pool.query(
+    'DELETE FROM pacientes WHERE id = ?',
+    [id]
+  );
+
+  // Verificar si se eliminó algún registro
+  if (resultado.affectedRows === 0) {
+    const error = new Error(
+      `No se puede eliminar el paciente porque no existe un registro con el ID ${id}.`
+    );
+
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return true;
 }
 
+// =====================================================================
+// EXPORTAR FUNCIONES DEL REPOSITORIO
+// =====================================================================
 
-module.exports = { findAll, findById, findByDocumento, create, update, remove };
+module.exports = {
+  findAll,
+  findById,
+  findByDocumento,
+  create,
+  update,
+  remove
+};
