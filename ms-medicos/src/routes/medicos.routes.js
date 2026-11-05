@@ -11,6 +11,9 @@ const router = Router();
 router.get('/', controller.listar);      // listar todos los médicos
 router.get('/:id', controller.obtener);  // obtener un médico por id
 router.post('/', controller.crear);      // crear un médico
+router.put('/:id', controller.actualizar);  // actualizar un médico por id
+router.delete('/:id', controller.eliminar);  // eliminar un médico por id
+
 
 // Taller 2: agregar PUT /:id (actualizar) y DELETE /:id (eliminar)
 
