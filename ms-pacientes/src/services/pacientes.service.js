@@ -7,8 +7,8 @@ const repo = require('../repositories/pacientes.repository');
 const { validarPaciente, construirPaciente } = require('../models/paciente');
 const HttpError = require('../utils/http-error');
 
-async function listar() {
-  return repo.findAll();
+async function listar(filtros) {
+  return repo.findAll(filtros);
 }
 
 async function obtener(id) {
@@ -38,8 +38,13 @@ async function actualizar(id, datos){
   const paciente = construirPaciente(datos);
 
   const actualizado = await repo.update(id, paciente);
-  if (!actualizado) throw new HttpError(`404, No existe el paciente con id ${id}`);
+  if (!actualizado) throw new HttpError(404, `No existe el paciente con id ${id}`);
   return actualizado;
 }
 
-module.exports = { listar, obtener, crear, actualizar};
+async function eliminar(id){
+  const eliminado = await repo.remove(id);
+  if (!eliminado) throw new HttpError(404, `No existe el usuario con id ${id}`)
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar };

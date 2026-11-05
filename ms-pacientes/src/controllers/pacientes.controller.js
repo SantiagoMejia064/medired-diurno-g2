@@ -13,8 +13,16 @@ function leerId(req) {
 }
 
 // GET /pacientes
+// GET /pacientes, GET /pacientes?eps=Sanitas, GET /pacientes?ids=1,3
 async function listar(req, res) {
-  const pacientes = await service.listar();
+  const filtros = { eps: req.query.eps };
+  if(req.query.ids){
+    filtros.ids = String(req.query.ids).split(',').map(Number);
+    if (filtros.ids.some((id) => !Number.isInteger(id) || id <= 0)){
+      throw new HttpError(400, 'ids debe ser una lista de enteros separados por comas');
+    }
+  }
+  const pacientes = await service.listar(filtros);
   res.status(200).json(pacientes);
 }
 
@@ -35,4 +43,9 @@ async function actualizar(req, res){
   res.status(200).json(actualizado);
 }
 
-module.exports = { listar, obtener, crear, actualizar};
+async function eliminar(req, res){
+  await service.eliminar(leerId(req));
+  res.status(204).end();   //204 No content: éxito, sin cuerpo
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar };

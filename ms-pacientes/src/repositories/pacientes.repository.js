@@ -52,8 +52,10 @@ const pacientes = [
 ];
 let siguienteId = 6;
 
-async function findAll() {
-  return pacientes;
+async function findAll(filtros = {}) {
+  return pacientes.filter((p) =>
+    (!filtros.eps || p.eps === filtros.eps) &&
+    (!filtros.ids || filtros.ids.includes(p.id)));
 }
 
 async function findById(id) {
@@ -77,5 +79,12 @@ async function update (id, paciente){
   return pacientes[posicion];
 }
 
+async function remove(id){
+  const posicion = pacientes.findIndex((p) => p.id === id);
+  if (posicion === -1) return false;
+  pacientes.splice(posicion, 1);
+  return true; 
+}
 
-module.exports = { findAll, findById, findByDocumento, create, update};
+
+module.exports = { findAll, findById, findByDocumento, create, update, remove };
