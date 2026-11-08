@@ -45,14 +45,36 @@ async function crear(datos) {
 
 async function actualizar(id, datos) {
   const errores = validarMedico(datos);
-  if (errores.length > 0) throw new HttpError(400, 'Datos inválidos', errores);
+
+  if (errores.length > 0) {
+    throw new HttpError(400, 'Datos inválidos', errores);
+  }
+
+  // Verificar que el registro médico no pertenezca a otro médico
+  const existente = await repo.findByRegistroMedico(datos.registro_medico);
+
+  if (existente && existente.id !== id) {
+    throw new HttpError(409, 'El registro médico ya está registrado');
+  }
 
   const medico = construirMedico(datos);
 
-  const actualizado = await repo.update(id, medico);
-  if (!actualizado) throw new HttpError(404, `No existe el médico con id ${id}`);
+  try {
+    const actualizado = await repo.update(id, medico);
 
-  return actualizado;
+    if (!actualizado) {
+      throw new HttpError(404, `No existe el médico con id ${id}`);
+    }
+
+    return actualizado;
+  } catch (error) {
+    // Evita devolver 500 si MySQL detecta un registro duplicado
+    if (error.code === 'ER_DUP_ENTRY') {
+      throw new HttpError(409, 'El registro médico ya está registrado');
+    }
+
+    throw error;
+  }
 }
 
 async function eliminar(id) {
