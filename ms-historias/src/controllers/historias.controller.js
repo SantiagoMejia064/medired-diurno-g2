@@ -30,4 +30,46 @@ async function crear(req, res) {
   res.status(201).location(`${req.baseUrl}/${nuevo.id}`).json(nuevo);
 }
 
-module.exports = { listar, obtener, crear };
+// PUT /historias/:id
+async function actualizar(req, res) {
+  const actualizada = await service.actualizar(
+    leerId(req),
+    req.body
+  );
+
+  res.status(200).json(actualizada);
+}
+
+// DELETE /historias/:id
+async function eliminar(req, res) {
+  await service.eliminar(leerId(req));
+
+  res.status(204).end();
+}
+
+// GET /historias?paciente_id=... listar historias filtradas por paciente_id
+async function listar(req, res) {
+  const filtros = {};
+
+  if (req.query.paciente_id !== undefined) {
+    const pacienteId = Number(req.query.paciente_id);
+
+    if (
+      typeof req.query.paciente_id !== 'string' ||
+      !Number.isInteger(pacienteId) ||
+      pacienteId <= 0
+    ) {
+      throw new HttpError(
+        400,
+        'paciente_id debe ser un entero positivo'
+      );
+    }
+
+    filtros.paciente_id = pacienteId;
+  }
+
+  const historias = await service.listar(filtros);
+  res.status(200).json(historias);
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar };
