@@ -1,140 +1,60 @@
 // =====================================================================
 // CAPA DE ACCESO A DATOS (repositorio)
-// Gestiona el almacenamiento y consulta de las citas médicas.
+// Única capa que sabe DÓNDE se guardan los datos.
+// Versión del Taller 1: datos en memoria (se pierden al reiniciar).
+// En el Taller 2 se reemplaza por MySQL SIN tocar las otras capas.
+// Todas las funciones son async (devuelven promesas) para que el cambio
+// a una base de datos real no obligue a modificar la capa de servicio.
 // =====================================================================
+const citas = [
+  {
+    id: 1,
+    paciente_id: 1,
+    medico_id: 2,
+    fecha_hora: "2026-11-03T09:00",
+    sede: "Cali",
+    estado: "programada",
+  },
+  {
+    id: 2,
+    paciente_id: 2,
+    medico_id: 1,
+    fecha_hora: "2026-11-03T10:30",
+    sede: "Bogotá",
+    estado: "programada",
+  },
+  {
+    id: 3,
+    paciente_id: 3,
+    medico_id: 3,
+    fecha_hora: "2026-11-04T14:00",
+    sede: "Medellín",
+    estado: "atendida",
+  },
+];
 
-const pool = require("../db");
+let siguienteId = 4;
 
-// Convierte una fila de MySQL al formato utilizado por la API.
-function mapearCita(fila) {
-  if (!fila) return null;
-
-  return {
-    id: fila.id,
-    paciente_id: fila.paciente_id,
-    medico_id: fila.medico_id,
-    fecha_hora: fila.fecha_hora.replace(" ", "T").slice(0, 16),
-    sede: fila.sede,
-    estado: fila.estado,
-  };
+async function findAll() {
+  return citas;
 }
 
-// Convierte la fecha de la API al formato DATETIME de MySQL.
-function fechaParaMySQL(fechaHora) {
-  return fechaHora.replace("T", " ") + ":00";
-}
-
-// Lista las citas y permite filtrarlas por estado.
-async function findAll(filtros = {}) {
-  let sql = "SELECT * FROM citas";
-  const valores = [];
-
-  if (filtros.estado) {
-    sql += " WHERE estado = ?";
-    valores.push(filtros.estado);
-  }
-
-  sql += " ORDER BY id";
-
-  const [filas] = await pool.execute(sql, valores);
-  return filas.map(mapearCita);
-}
-
-// Busca una cita por su identificador.
 async function findById(id) {
-  const [filas] = await pool.execute("SELECT * FROM citas WHERE id = ?", [id]);
-
-  return mapearCita(filas[0]);
+  return citas.find((cita) => cita.id === id) || null;
 }
 
-// Crea una cita y devuelve el registro almacenado.
 async function create(cita) {
-  const sql = `
-    INSERT INTO citas
-      (paciente_id, medico_id, fecha_hora, sede, estado)
-    VALUES (?, ?, ?, ?, ?)
-  `;
-
-  const valores = [
-    cita.paciente_id,
-    cita.medico_id,
-    fechaParaMySQL(cita.fecha_hora),
-    cita.sede,
-    cita.estado,
-  ];
-
-  const [resultado] = await pool.execute(sql, valores);
-
-  return findById(resultado.insertId);
+  const nueva = { id: siguienteId++, ...cita };
+  citas.push(nueva);
+  return nueva;
 }
 
-// Actualiza una cita existente conservando su identificador.
-async function update(id, datos) {
-  const sql = `
-    UPDATE citas
-    SET paciente_id = ?,
-        medico_id = ?,
-        fecha_hora = ?,
-        sede = ?,
-        estado = ?
-    WHERE id = ?
-  `;
-
-  const valores = [
-    datos.paciente_id,
-    datos.medico_id,
-    fechaParaMySQL(datos.fecha_hora),
-    datos.sede,
-    datos.estado,
-    id,
-  ];
-
-  const [resultado] = await pool.execute(sql, valores);
-
-  if (resultado.affectedRows === 0) {
-    return null;
-  }
-
-  return findById(id);
+async function findByMedicoYFecha(medicoId, fechaHora) {
+  return citas.find((cita) =>
+    cita.medico_id === medicoId &&
+    cita.fecha_hora === fechaHora &&
+    cita.estado !== 'cancelada'
+  ) || null;
 }
 
-// Elimina una cita e indica si existía.
-async function remove(id) {
-  const [resultado] = await pool.execute("DELETE FROM citas WHERE id = ?", [
-    id,
-  ]);
-
-  return resultado.affectedRows > 0;
-}
-
-// Busca conflictos de horario, excluyendo la cita que se edita.
-async function findByMedicoYFecha(medicoId, fechaHora, excluirId = null) {
-  let sql = `
-    SELECT * FROM citas
-    WHERE medico_id = ?
-      AND fecha_hora = ?
-      AND estado <> 'cancelada'
-  `;
-
-  const valores = [medicoId, fechaParaMySQL(fechaHora)];
-
-  if (excluirId !== null) {
-    sql += " AND id <> ?";
-    valores.push(excluirId);
-  }
-
-  sql += " LIMIT 1";
-
-  const [filas] = await pool.execute(sql, valores);
-
-  return mapearCita(filas[0]);
-}
-
-module.exports = {
-  findAll,
-  findById,
-  create,
-  update,
-  remove,
-  findByMedicoYFecha,
-};
+module.exports = { findAll, findById, create, findByMedicoYFecha };
