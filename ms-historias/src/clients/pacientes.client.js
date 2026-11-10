@@ -3,6 +3,8 @@ const PACIENTES_URL = process.env.PACIENTES_URL;
 
 async function pedir(ruta, token) {
   try {
+    console.log(`[Historias → Pacientes] GET ${ruta}`);
+    
     return await fetch(`${PACIENTES_URL}${ruta}`, {
       headers: { Authorization: token },
       signal: AbortSignal.timeout(3000),
