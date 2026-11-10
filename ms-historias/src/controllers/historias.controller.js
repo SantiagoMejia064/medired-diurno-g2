@@ -12,21 +12,16 @@ function leerId(req) {
   return id;
 }
 
-// GET /historias
-async function listar(req, res) {
-  const historias = await service.listar();
-  res.status(200).json(historias);
-}
 
 // GET /historias/:id
 async function obtener(req, res) {
-  const historias = await service.obtener(leerId(req));
+  const historias = await service.obtener(leerId(req), req.headers.authorization);
   res.status(200).json(historias);
 }
 
 // POST /historias
 async function crear(req, res) {
-  const nuevo = await service.crear(req.body);
+  const nuevo = await service.crear(req.body, req.headers.authorization);
   res.status(201).location(`${req.baseUrl}/${nuevo.id}`).json(nuevo);
 }
 
@@ -34,7 +29,8 @@ async function crear(req, res) {
 async function actualizar(req, res) {
   const actualizada = await service.actualizar(
     leerId(req),
-    req.body
+    req.body,
+    req.headers.authorization
   );
 
   res.status(200).json(actualizada);
@@ -68,7 +64,7 @@ async function listar(req, res) {
     filtros.paciente_id = pacienteId;
   }
 
-  const historias = await service.listar(filtros);
+  const historias = await service.listar(filtros, req.headers.authorization);
   res.status(200).json(historias);
 }
 

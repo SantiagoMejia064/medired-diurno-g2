@@ -4,15 +4,16 @@
 // =====================================================================
 const { Router } = require('express');
 const controller = require('../controllers/historias.controller');
+const { verificarToken, requiereRol } = require('../middlewares/auth');
 
 const router = Router();
 
+router.use(verificarToken);
+
 router.get('/', controller.listar);      // listar todos los historias
 router.get('/:id', controller.obtener);  // obtener un historias por id
-router.post('/', controller.crear);      // crear un historias
+router.post('/', requiereRol('administrador', 'medico'), controller.crear);
+router.put('/:id', requiereRol('administrador', 'medico'), controller.actualizar);
+router.delete('/:id', requiereRol('administrador', 'medico'), controller.eliminar);
 
-// Taller 2: agregar PUT /:id (actualizar) y DELETE /:id (eliminar)
-
-router.put('/:id', controller.actualizar); // actualizar un historias por id
-router.delete('/:id', controller.eliminar);
 module.exports = router;
