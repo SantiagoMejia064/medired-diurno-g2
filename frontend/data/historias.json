@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "paciente_id": 1,
+    "medico_id": 1,
+    "fecha": "2026-10-27",
+    "motivo_consulta": "Consulta de control.",
+    "diagnostico": "Registro ficticio de seguimiento general.",
+    "tratamiento": "Plan de seguimiento de ejemplo.",
+    "paciente": { "id": 1, "nombre": "Laura Méndez" },
+    "medico": { "id": 1, "nombre": "Ana Salazar", "especialidad": "Medicina general" }
+  },
+  {
+    "id": 2,
+    "paciente_id": 2,
+    "medico_id": 2,
+    "fecha": "2026-10-26",
+    "motivo_consulta": "Revisión de una atención anterior.",
+    "diagnostico": "Registro ficticio de revisión clínica.",
+    "tratamiento": "Indicaciones de ejemplo para la próxima visita.",
+    "paciente": { "id": 2, "nombre": "Mateo Ríos" },
+    "medico": { "id": 2, "nombre": "Daniel Vargas", "especialidad": "Medicina interna" }
+  },
+  {
+    "id": 3,
+    "paciente_id": 1,
+    "medico_id": 3,
+    "fecha": "2026-10-23",
+    "motivo_consulta": "Primera consulta.",
+    "diagnostico": "Registro ficticio de valoración inicial.",
+    "tratamiento": "Plan de atención de ejemplo.",
+    "paciente": { "id": 1, "nombre": "Laura Méndez" },
+    "medico": { "id": 3, "nombre": "Camila Gómez", "especialidad": "Medicina familiar" }
+  }
+]
