@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#E6ECEA">
+  <title>Acceso | MediRed IPS</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <script type="module" src="js/sesion.js"></script>
+</head>
+<body class="acceso">
+  <main class="tarjeta tarjeta-acceso">
+    <div class="marca">
+      <img src="css/pulso.svg" alt="" width="42" height="42">
+      <span>MediRed <small>IPS</small></span>
+    </div>
+    <p class="etiqueta">Gestión de citas</p>
+    <h1>Acceso al panel</h1>
+    <p class="secundario">Selecciona un rol para iniciar la sesión simulada.</p>
+
+    <form id="acceso">
+      <label for="rol">Rol de acceso</label>
+      <select id="rol" name="rol" required>
+        <option value="" selected disabled>Selecciona un rol</option>
+        <option value="administrador">Administrador</option>
+        <option value="admisiones">Admisiones</option>
+        <option value="medico">Médico</option>
+      </select>
+      <button class="boton primario" type="submit">Ingresar al panel</button>
+    </form>
+  </main>
+</body>
+</html>

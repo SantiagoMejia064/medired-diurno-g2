@@ -1,0 +1,5 @@
+[
+  { "id": 1, "nombre": "Ana Salazar", "especialidad": "Medicina general", "sede": "Cali" },
+  { "id": 2, "nombre": "Daniel Vargas", "especialidad": "Medicina interna", "sede": "Bogotá" },
+  { "id": 3, "nombre": "Camila Gómez", "especialidad": "Medicina familiar", "sede": "Medellín" }
+]
