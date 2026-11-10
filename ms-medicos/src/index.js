@@ -2,6 +2,9 @@
 // Punto de arranque del microservicio.
 // Lee la configuración (variables de entorno) y pone el servidor a escuchar.
 // =====================================================================
+require('dotenv').config();
+
+const pool = require('./db');
 const app = require('./app');
 
 const PORT = Number(process.env.PORT) || 3000;
