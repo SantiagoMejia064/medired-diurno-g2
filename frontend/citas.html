@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#E6ECEA">
+  <title>Citas | MediRed IPS</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <script type="module" src="js/citas.js"></script>
+</head>
+<body class="panel" data-privado hidden>
+  <aside class="lateral">
+    <div class="marca">
+      <img src="css/pulso.svg" alt="" width="42" height="42">
+      <span>MediRed <small>IPS</small></span>
+    </div>
+    <nav aria-label="Navegación principal">
+      <a href="inicio.html">Inicio</a>
+      <a href="citas.html" aria-current="page">Citas</a>
+    </nav>
+    <div class="sesion">
+      <span data-rol></span>
+      <button type="button" data-salir>Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="contenido">
+    <header class="encabezado">
+      <div>
+        <p class="etiqueta">Agenda médica</p>
+        <h1>Citas</h1>
+        <p id="modo-consulta" class="secundario" hidden>Modo de solo consulta</p>
+      </div>
+      <button id="nueva-cita" class="boton primario" type="button" hidden>Nueva cita</button>
+    </header>
+
+    <p id="aviso" class="aviso" role="status"></p>
+    <section class="tarjeta listado" aria-labelledby="titulo-listado">
+      <h2 id="titulo-listado">Citas registradas</h2>
+      <p id="estado-listado" role="status">Cargando citas…</p>
+      <div class="tabla-contenedor" role="region" aria-labelledby="titulo-listado" tabindex="0" hidden>
+        <table aria-labelledby="titulo-listado">
+          <thead>
+            <tr>
+              <th scope="col">Fecha y hora</th>
+              <th scope="col">Paciente</th>
+              <th scope="col">Médico</th>
+              <th scope="col">Sede</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="filas-citas"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="editor" aria-labelledby="titulo-editor">
+    <form id="formulario-cita">
+      <h2 id="titulo-editor"></h2>
+      <div class="campos">
+        <div>
+          <label for="paciente_id">Paciente</label>
+          <select id="paciente_id" name="paciente_id" required></select>
+        </div>
+        <div>
+          <label for="medico_id">Médico</label>
+          <select id="medico_id" name="medico_id" required></select>
+        </div>
+        <div>
+          <label for="fecha_hora">Fecha y hora</label>
+          <input type="datetime-local" id="fecha_hora" name="fecha_hora" required>
+        </div>
+        <div>
+          <label for="sede">Sede</label>
+          <select id="sede" name="sede" required></select>
+        </div>
+        <div>
+          <label for="estado">Estado</label>
+          <select id="estado" name="estado" required></select>
+        </div>
+      </div>
+      <p id="error-editor" class="error" role="alert"></p>
+      <div class="acciones-dialogo">
+        <button id="cancelar-editor" class="boton" type="button">Cancelar</button>
+        <button class="boton primario" type="submit">Guardar cita</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detalle" aria-labelledby="titulo-detalle">
+    <h2 id="titulo-detalle">Detalle de la cita</h2>
+    <dl id="datos-detalle"></dl>
+    <form method="dialog" class="acciones-dialogo">
+      <button class="boton primario" type="submit">Cerrar</button>
+    </form>
+  </dialog>
+</body>
+</html>

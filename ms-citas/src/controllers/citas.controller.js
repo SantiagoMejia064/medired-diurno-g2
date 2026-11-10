@@ -18,33 +18,39 @@ function leerId(req) {
   return id;
 }
 
-// Lista las citas con filtro opcional por estado.
+// Lista las citas con filtros y sus datos relacionados.
 async function listar(req, res) {
   const filtros = { estado: req.query.estado };
-  const citas = await service.listar(filtros);
+
+  // Reenviar el JWT para consultar otros microservicios.
+  const citas = await service.listar(filtros, req.headers.authorization);
 
   res.status(200).json(citas);
 }
 
-// Consulta una cita por id y devuelve sus datos.
+// Consulta una cita por id con su paciente y médico.
 async function obtener(req, res) {
-  const cita = await service.obtener(leerId(req));
+  const cita = await service.obtener(leerId(req), req.headers.authorization);
 
   res.status(200).json(cita);
 }
 
-// Crea una cita y responde con su ubicación y estado 201.
+// Crea una cita validando sus referencias y responde 201.
 async function crear(req, res) {
-  const nueva = await service.crear(req.body);
+  const nueva = await service.crear(req.body, req.headers.authorization);
 
   res.status(201).location(`${req.baseUrl}/${nueva.id}`).json(nueva);
 }
 
-// Actualiza la cita indicada en la URL y devuelve sus datos.
+// Actualiza una cita y devuelve sus datos relacionados.
 async function actualizar(req, res) {
   const id = leerId(req);
 
-  const citaActualizada = await service.actualizar(id, req.body);
+  const citaActualizada = await service.actualizar(
+    id,
+    req.body,
+    req.headers.authorization,
+  );
 
   res.status(200).json(citaActualizada);
 }

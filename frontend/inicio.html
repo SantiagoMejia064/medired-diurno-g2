@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#E6ECEA">
+  <title>Inicio | MediRed IPS</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <script type="module" src="js/sesion.js"></script>
+</head>
+<body class="panel" data-privado hidden>
+  <aside class="lateral">
+    <div class="marca">
+      <img src="css/pulso.svg" alt="" width="42" height="42">
+      <span>MediRed <small>IPS</small></span>
+    </div>
+    <nav aria-label="Navegación principal">
+      <a href="inicio.html" aria-current="page">Inicio</a>
+      <a href="citas.html">Citas</a>
+    </nav>
+    <div class="sesion">
+      <span data-rol></span>
+      <button type="button" data-salir>Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="contenido">
+    <header class="encabezado">
+      <div>
+        <p class="etiqueta">Panel interno</p>
+        <h1>Inicio</h1>
+      </div>
+    </header>
+    <section class="tarjeta bienvenida" aria-labelledby="titulo-bienvenida">
+      <h2 id="titulo-bienvenida">Bienvenido a MediRed IPS</h2>
+      <p class="secundario">Sesión simulada · <strong data-rol></strong></p>
+      <a href="citas.html" class="boton primario">Ir a citas</a>
+    </section>
+  </main>
+</body>
+</html>
