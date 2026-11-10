@@ -158,7 +158,7 @@ Se realizaron pruebas manuales en Postman para comprobar:
 
 En MySQL Workbench se consultaron los registros para verificar los datos almacenados, actualizados y eliminados.
 
-## Operaciones disponibles actualmente
+## Operaciones al cierre de la primera parte
 
 **Dirección base:** `http://127.0.0.1:3005`
 
@@ -261,7 +261,7 @@ Al consultar, actualizar o eliminar una historia inexistente, responde `404 Not 
 
 Los identificadores inválidos, filtros inválidos y cuerpos JSON mal formados producen una respuesta `400 Bad Request`.
 
-## Estructura actual
+## Estructura al cierre de la primera parte
 
 ```text
 ms-historias/
@@ -387,3 +387,61 @@ Mantener la terminal abierta mientras se utiliza el servicio. Para detenerlo, pr
 En ejecuciones posteriores, con las dependencias, la base de datos y la configuración preparadas, basta con ejecutar `npm run dev`.
 
 `GET /health` comprueba que la aplicación responde. `GET /historias` comprueba también el acceso a la base de datos.
+
+
+## Taller 2 — Segunda parte
+
+En esta etapa se protegieron las rutas de Historias con JWT y se integraron los microservicios de Pacientes y Médicos. Al crear o actualizar una historia se comprueba que ambos registros existan. Al responder, se agregan los datos del paciente y del médico a la información de la atención.
+
+### Autenticación y permisos
+
+El token se obtiene al iniciar sesión mediante `POST /usuarios/login` en `ms-usuarios` (`http://127.0.0.1:3001`). Las peticiones a `/historias` deben enviarlo en la cabecera `Authorization: Bearer <token>`.
+
+| Operación | Acceso |
+|---|---|
+| `GET /health` | Público. |
+| Listar, filtrar y consultar historias | Cualquier cuenta con un token válido. |
+| Crear, actualizar y eliminar historias | Roles `administrador` y `medico`. |
+
+Un token ausente, inválido o vencido devuelve `401 Unauthorized`. Si el token es válido pero el rol carece de permiso para la operación, se devuelve `403 Forbidden`.
+
+### Configuración local
+
+Además de la configuración de MySQL, completa estas variables en el `.env` de Historias:
+
+```dotenv
+JWT_SECRET=
+PACIENTES_URL=http://127.0.0.1:3002
+MEDICOS_URL=http://127.0.0.1:3003
+```
+
+En `JWT_SECRET`, usa la misma clave que tiene configurada `ms-usuarios`. Mantén esa clave en tu `.env` local. Para probar el flujo completo, inicia Usuarios, Pacientes, Médicos e Historias en terminales separadas.
+
+### Validación de referencias y composición
+
+- **Al crear o actualizar**, Historias consulta `GET /pacientes/:id` y `GET /medicos/:id` antes de guardar. Si una referencia no existe, devuelve `400 Bad Request`. Si uno de los servicios no responde durante esa validación, devuelve `503 Service Unavailable` y la operación se detiene antes de guardar.
+- **Al listar**, Historias agrupa los identificadores únicos y hace una consulta por lote a cada servicio mediante `GET /pacientes?ids=…` y `GET /medicos?ids=…`. Los clientes HTTP reenvían la cabecera de autorización recibida.
+- **Al consultar, crear o actualizar**, la respuesta incluye los campos `paciente` y `medico`. Por ejemplo, una consulta a `GET /historias/1` puede devolver `200 OK` con este cuerpo:
+
+```json
+{
+  "id": 1,
+  "paciente_id": 1,
+  "medico_id": 2,
+  "fecha": "2026-10-27",
+  "motivo_consulta": "Motivo de consulta de ejemplo",
+  "diagnostico": "Diagnóstico de ejemplo",
+  "tratamiento": "Tratamiento de ejemplo",
+  "paciente": {
+    "id": 1,
+    "nombre": "María Fernanda López"
+  },
+  "medico": {
+    "id": 2,
+    "nombre": "Laura Gómez",
+    "especialidad": "Pediatría"
+  }
+}
+```
+
+Si Médicos está detenido al consultar, Historias devuelve `200 OK` con los datos disponibles, `medico: null` y `aviso: "ms-medicos no está disponible"`. Si falla Pacientes, el campo `paciente` queda en `null` y el aviso identifica a ese servicio. MySQL guarda los identificadores de referencia. Los datos relacionados se agregan al construir la respuesta.
