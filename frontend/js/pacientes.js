@@ -1,11 +1,5 @@
 
-import { obtenerRol, obtenerToken } from "./sesion.js";
-
-// ============================================================
-// CONFIGURACIÓN
-// ============================================================
-
-const API_URL = "http://127.0.0.1:3002/pacientes";
+import { obtenerRol } from "./sesion.js";
 
 const filas = document.querySelector("#filas-pacientes");
 const tabla = document.querySelector(".tabla-contenedor");
@@ -19,68 +13,23 @@ const formulario = document.querySelector("#formulario-paciente");
 const errorEditor = document.querySelector("#error-editor");
 const aviso = document.querySelector("#aviso");
 
+const CLAVE_PACIENTES = "medired.pacientes";
+
 const puedeGestionar = obtenerRol() === "administrador";
 
 let pacientes = [];
 let idEnEdicion = null;
 
-// ============================================================
-// AUTENTICACIÓN
-// ============================================================
 
-function obtenerCabeceras() {
-  const token = obtenerToken();
-
-  if (!token) {
-    throw new Error("No se encontró el token de sesión. Inicia sesión nuevamente.");
-  }
-
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`
-  };
-}
-
-// ============================================================
-// PETICIONES A LA API
-// ============================================================
-
-async function solicitar(url, opciones = {}) {
-  const respuesta = await fetch(url, {
-    ...opciones,
-    headers: {
-      ...obtenerCabeceras(),
-      ...opciones.headers
-    }
-  });
-
-  if (respuesta.status === 204) {
-    return null;
-  }
-
-  const contenido = await respuesta.json().catch(() => ({}));
-
-  if (!respuesta.ok) {
-    const mensaje = contenido.detalles
-      ? `${contenido.error}: ${contenido.detalles.join(", ")}`
-      : contenido.error || `Error HTTP ${respuesta.status}`;
-
-    throw new Error(mensaje);
-  }
-
-  return contenido;
-}
-
-// ============================================================
-// CREAR CELDAS Y BOTONES
-// ============================================================
-
+// Crea una celda de la tabla
 function agregarCelda(fila, texto) {
   const celda = fila.insertCell();
-  celda.textContent = texto ?? "—";
+  celda.textContent = texto ?? "";
   return celda;
 }
 
+
+// Crea un botón de acción
 function crearAccion(texto, ejecutar, clase = "") {
   const boton = document.createElement("button");
 
@@ -92,18 +41,15 @@ function crearAccion(texto, ejecutar, clase = "") {
   return boton;
 }
 
-// ============================================================
-// MOSTRAR DETALLE DEL PACIENTE
-// ============================================================
 
+// Muestra los detalles de un paciente
 function mostrarDetalle(paciente) {
   const campos = [
-    ["Nombre completo", paciente.nombre],
+    ["Nombre", paciente.nombre],
     ["Documento", paciente.documento],
     ["Fecha de nacimiento", paciente.fecha_nacimiento],
     ["EPS", paciente.eps],
     ["Teléfono", paciente.telefono],
-    ["ID del paciente", paciente.id]
   ];
 
   datosDetalle.replaceChildren();
@@ -113,7 +59,7 @@ function mostrarDetalle(paciente) {
     const descripcion = document.createElement("dd");
 
     termino.textContent = etiqueta;
-    descripcion.textContent = valor ?? "—";
+    descripcion.textContent = valor || "No registrado";
 
     datosDetalle.append(termino, descripcion);
   }
@@ -121,10 +67,17 @@ function mostrarDetalle(paciente) {
   detalle.showModal();
 }
 
-// ============================================================
-// ABRIR FORMULARIO PARA CREAR O EDITAR
-// ============================================================
 
+// Guarda los pacientes modificados en localStorage
+function guardarDatos() {
+  localStorage.setItem(
+    CLAVE_PACIENTES,
+    JSON.stringify(pacientes)
+  );
+}
+
+
+// Abre el formulario para crear o editar
 function abrirEditor(paciente = null) {
   if (!puedeGestionar) return;
 
@@ -136,29 +89,45 @@ function abrirEditor(paciente = null) {
   document.querySelector("#titulo-editor").textContent =
     paciente ? "Editar paciente" : "Nuevo paciente";
 
-  document.querySelector("#guardar-paciente").textContent =
-    paciente ? "Guardar cambios" : "Registrar paciente";
-
   if (paciente) {
     for (const campo of [
       "nombre",
       "documento",
       "fecha_nacimiento",
       "eps",
-      "telefono"
+      "telefono",
     ]) {
-      formulario.elements[campo].value = paciente[campo];
+      formulario.elements[campo].value = paciente[campo] ?? "";
     }
   }
 
   editor.showModal();
 }
 
-// ============================================================
-// VALIDAR DATOS DEL FORMULARIO
-// ============================================================
 
-function validarDatos(paciente) {
+// Elimina un paciente
+function eliminarPaciente(paciente) {
+  if (!puedeGestionar) return;
+
+  const confirmar = window.confirm(
+    `¿Eliminar al paciente ${paciente.nombre}?`
+  );
+
+  if (!confirmar) return;
+
+  pacientes = pacientes.filter(
+    (registro) => registro.id !== paciente.id
+  );
+
+  guardarDatos();
+  renderizarListado();
+
+  aviso.textContent = "Paciente eliminado.";
+}
+
+
+// Valida los datos del paciente
+function validarPaciente(paciente) {
   if (
     !paciente.nombre ||
     !paciente.documento ||
@@ -169,15 +138,24 @@ function validarDatos(paciente) {
     return "Todos los campos son obligatorios.";
   }
 
-  if (!/^\d{6,10}$/.test(paciente.documento)) {
-    return "El documento debe contener entre 6 y 10 dígitos.";
+  if (!/^\d{6,15}$/.test(paciente.documento)) {
+    return "El documento debe contener entre 6 y 15 números.";
   }
 
   if (!/^\d{10}$/.test(paciente.telefono)) {
-    return "El teléfono debe contener exactamente 10 dígitos.";
+    return "El teléfono debe contener exactamente 10 números.";
   }
 
-  const fecha = new Date(`${paciente.fecha_nacimiento}T00:00:00`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paciente.fecha_nacimiento)) {
+    return "La fecha de nacimiento no es válida.";
+  }
+
+  const fecha = new Date(
+    `${paciente.fecha_nacimiento}T00:00:00`
+  );
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
 
   if (
     Number.isNaN(fecha.getTime()) ||
@@ -186,9 +164,6 @@ function validarDatos(paciente) {
     return "La fecha de nacimiento no es válida.";
   }
 
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-
   if (fecha > hoy) {
     return "La fecha de nacimiento no puede ser futura.";
   }
@@ -196,94 +171,76 @@ function validarDatos(paciente) {
   return null;
 }
 
-// ============================================================
-// GUARDAR O ACTUALIZAR PACIENTE
-// ============================================================
 
-async function guardarPaciente(evento) {
+// Guarda o actualiza un paciente
+function guardarPaciente(evento) {
   evento.preventDefault();
 
   if (!puedeGestionar) return;
-
-  errorEditor.textContent = "";
 
   const datos = new FormData(formulario);
 
   const paciente = {
     nombre: String(datos.get("nombre")).trim(),
     documento: String(datos.get("documento")).trim(),
-    fecha_nacimiento: String(datos.get("fecha_nacimiento")),
+    fecha_nacimiento: String(datos.get("fecha_nacimiento")).trim(),
     eps: String(datos.get("eps")).trim(),
-    telefono: String(datos.get("telefono")).trim()
+    telefono: String(datos.get("telefono")).trim(),
   };
 
-  const errorValidacion = validarDatos(paciente);
+  const error = validarPaciente(paciente);
 
-  if (errorValidacion) {
-    errorEditor.textContent = errorValidacion;
+  if (error) {
+    errorEditor.textContent = error;
     return;
   }
 
-  const esEdicion = idEnEdicion !== null;
-
-  try {
-    if (esEdicion) {
-      await solicitar(`${API_URL}/${idEnEdicion}`, {
-        method: "PUT",
-        body: JSON.stringify(paciente)
-      });
-
-      aviso.textContent = "Paciente actualizado correctamente.";
-    } else {
-      await solicitar(API_URL, {
-        method: "POST",
-        body: JSON.stringify(paciente)
-      });
-
-      aviso.textContent = "Paciente registrado correctamente.";
-    }
-
-    editor.close();
-    await cargarPacientes();
-
-  } catch (error) {
-    console.error("ERROR AL GUARDAR PACIENTE:", error);
-    errorEditor.textContent = error.message;
-  }
-}
-
-// ============================================================
-// ELIMINAR PACIENTE
-// ============================================================
-
-async function eliminarPaciente(paciente) {
-  if (!puedeGestionar) return;
-
-  const confirmar = window.confirm(
-    `¿Estás segura de que deseas eliminar al paciente ${paciente.nombre}?`
+  const duplicado = pacientes.some(
+    (registro) =>
+      registro.documento.toLowerCase() ===
+        paciente.documento.toLowerCase() &&
+      registro.id !== idEnEdicion
   );
 
-  if (!confirmar) return;
+  if (duplicado) {
+    errorEditor.textContent = "El documento ya está registrado.";
+    return;
+  }
 
-  try {
-    await solicitar(`${API_URL}/${paciente.id}`, {
-      method: "DELETE"
+  if (idEnEdicion === null) {
+    const nuevoId =
+      Math.max(
+        0,
+        ...pacientes.map((registro) => registro.id)
+      ) + 1;
+
+    pacientes.push({
+      id: nuevoId,
+      ...paciente,
     });
 
-    aviso.textContent = "Paciente eliminado correctamente.";
+    aviso.textContent = "Paciente creado.";
+  } else {
+    pacientes = pacientes.map((registro) =>
+      registro.id === idEnEdicion
+        ? {
+            id: registro.id,
+            ...paciente,
+          }
+        : registro
+    );
 
-    await cargarPacientes();
-
-  } catch (error) {
-    console.error("ERROR AL ELIMINAR PACIENTE:", error);
-    aviso.textContent = `No se pudo eliminar el paciente: ${error.message}`;
+    aviso.textContent = "Paciente actualizado.";
   }
+
+  guardarDatos();
+  renderizarListado();
+
+  editor.close();
 }
 
-// ============================================================
-// RENDERIZAR TABLA
-// ============================================================
 
+// Muestra los pacientes en la tabla
 function renderizarListado() {
   const contenido = document.createDocumentFragment();
 
@@ -337,44 +294,25 @@ function renderizarListado() {
     puedeGestionar;
 }
 
-// ============================================================
-// CARGAR PACIENTES DESDE NODE.JS Y MARIADB
-// ============================================================
 
-async function cargarPacientes() {
-  estadoListado.hidden = false;
-  estadoListado.textContent = "Cargando pacientes…";
-  tabla.hidden = true;
-
-  try {
-    pacientes = await solicitar(API_URL);
-
-    renderizarListado();
-
-    console.log("========== PACIENTES CARGADOS ==========");
-    console.log("TOTAL:", pacientes.length);
-    console.log("RESPUESTA:", pacientes);
-    console.log("=========================================");
-
-  } catch (error) {
-    console.error("ERROR AL CARGAR PACIENTES:", error);
-
-    pacientes = [];
-    filas.replaceChildren();
-    tabla.hidden = true;
-    estadoListado.hidden = false;
-    estadoListado.textContent =
-      `No se pudieron cargar los pacientes: ${error.message}`;
-  }
-}
-
-// ============================================================
-// INICIALIZAR FRONTEND
-// ============================================================
-
+// Carga los datos iniciales
 async function iniciarPacientes() {
-  document.querySelector("#fecha_nacimiento").max =
-    new Date().toISOString().slice(0, 10);
+  const respuesta = await fetch("data/pacientes.json");
+
+  if (!respuesta.ok) {
+    throw new Error("No se pudo cargar pacientes.json");
+  }
+
+  const iniciales = await respuesta.json();
+
+  const guardados = localStorage.getItem(CLAVE_PACIENTES);
+
+  pacientes =
+    guardados === null
+      ? iniciales
+      : JSON.parse(guardados);
+
+  renderizarListado();
 
   nuevoPaciente.addEventListener(
     "click",
@@ -385,18 +323,27 @@ async function iniciarPacientes() {
     .querySelector("#cancelar-editor")
     .addEventListener("click", () => editor.close());
 
-  formulario.addEventListener(
-    "submit",
-    guardarPaciente
-  );
+  formulario.addEventListener("submit", guardarPaciente);
 
-  await cargarPacientes();
+  window.addEventListener("storage", (evento) => {
+    if (evento.key !== CLAVE_PACIENTES) return;
+
+    pacientes =
+      evento.newValue === null
+        ? iniciales
+        : JSON.parse(evento.newValue);
+
+    renderizarListado();
+  });
 }
 
-// ============================================================
-// INICIAR SOLO SI EXISTE UNA SESIÓN
-// ============================================================
 
+// Inicia pacientes si existe una sesión válida
 if (obtenerRol()) {
-  iniciarPacientes();
+  iniciarPacientes().catch((error) => {
+    console.error(error);
+
+    estadoListado.textContent =
+      "No se pudieron cargar los pacientes. Verifica el servidor HTTP local y recarga.";
+  });
 }

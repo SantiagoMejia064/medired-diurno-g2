@@ -1,6 +1,7 @@
 
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,14 +10,11 @@
   <title>Pacientes | MediRed IPS</title>
 
   <link rel="stylesheet" href="css/estilos.css">
+
   <script type="module" src="js/pacientes.js"></script>
 </head>
 
 <body class="panel" data-privado hidden>
-
-  <!-- =====================================================
-       MENÚ LATERAL
-  ====================================================== -->
 
   <aside class="lateral">
 
@@ -40,16 +38,13 @@
 
   </aside>
 
-  <!-- =====================================================
-       CONTENIDO PRINCIPAL
-  ====================================================== -->
 
   <main class="contenido">
 
     <header class="encabezado">
 
       <div>
-        <p class="etiqueta">Gestión de usuarios de salud</p>
+        <p class="etiqueta">Gestión de usuarios</p>
 
         <h1>Pacientes</h1>
 
@@ -68,17 +63,17 @@
 
     </header>
 
+
     <p id="aviso" class="aviso" role="status"></p>
 
-    <!-- =================================================
-         LISTADO DE PACIENTES
-    ================================================== -->
 
     <section
       class="tarjeta listado"
       aria-labelledby="titulo-listado">
 
-      <h2 id="titulo-listado">Pacientes registrados</h2>
+      <h2 id="titulo-listado">
+        Pacientes registrados
+      </h2>
 
       <p id="estado-listado" role="status">
         Cargando pacientes…
@@ -95,7 +90,7 @@
 
           <thead>
             <tr>
-              <th scope="col">Nombre completo</th>
+              <th scope="col">Nombre</th>
               <th scope="col">Documento</th>
               <th scope="col">Fecha de nacimiento</th>
               <th scope="col">EPS</th>
@@ -114,15 +109,14 @@
 
   </main>
 
-  <!-- =====================================================
-       FORMULARIO CREAR / EDITAR PACIENTE
-  ====================================================== -->
+
+  <!-- Formulario para crear y editar pacientes -->
 
   <dialog id="editor" aria-labelledby="titulo-editor">
 
     <form id="formulario-paciente">
 
-      <h2 id="titulo-editor">Nuevo paciente</h2>
+      <h2 id="titulo-editor"></h2>
 
       <div class="campos">
 
@@ -134,23 +128,21 @@
             name="nombre"
             type="text"
             maxlength="100"
-            placeholder="Nombre del paciente"
             required>
         </div>
 
+
         <div>
-          <label for="documento">Número de documento</label>
+          <label for="documento">Documento</label>
 
           <input
             id="documento"
             name="documento"
             type="text"
             inputmode="numeric"
-            maxlength="10"
-            pattern="[0-9]{6,10}"
-            placeholder="Ej. 1001234567"
             required>
         </div>
+
 
         <div>
           <label for="fecha_nacimiento">Fecha de nacimiento</label>
@@ -162,6 +154,7 @@
             required>
         </div>
 
+
         <div>
           <label for="eps">EPS</label>
 
@@ -170,9 +163,9 @@
             name="eps"
             type="text"
             maxlength="100"
-            placeholder="Ej. Sura"
             required>
         </div>
+
 
         <div>
           <label for="telefono">Teléfono</label>
@@ -183,14 +176,14 @@
             type="tel"
             inputmode="numeric"
             maxlength="10"
-            pattern="[0-9]{10}"
-            placeholder="Ej. 3001234567"
             required>
         </div>
 
       </div>
 
+
       <p id="error-editor" class="error" role="alert"></p>
+
 
       <div class="acciones-dialogo">
 
@@ -202,10 +195,9 @@
         </button>
 
         <button
-          id="guardar-paciente"
           class="boton primario"
           type="submit">
-          Registrar paciente
+          Guardar paciente
         </button>
 
       </div>
@@ -214,13 +206,14 @@
 
   </dialog>
 
-  <!-- =====================================================
-       DETALLE DEL PACIENTE
-  ====================================================== -->
+
+  <!-- Ventana de detalles -->
 
   <dialog id="detalle" aria-labelledby="titulo-detalle">
 
-    <h2 id="titulo-detalle">Detalle del paciente</h2>
+    <h2 id="titulo-detalle">
+      Detalle del paciente
+    </h2>
 
     <dl id="datos-detalle"></dl>
 
