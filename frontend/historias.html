@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#E6ECEA">
+  <title>Historias clínicas | MediRed IPS</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <link rel="stylesheet" href="css/historias.css">
+  <script type="module" src="js/historias.js"></script>
+</head>
+<body class="panel" data-privado hidden>
+  <aside class="lateral">
+    <div class="marca">
+      <img src="css/pulso.svg" alt="" width="42" height="42">
+      <span>MediRed <small>IPS</small></span>
+    </div>
+    <nav aria-label="Navegación principal">
+      <a href="inicio.html">Inicio</a>
+      <a href="citas.html">Citas</a>
+      <a href="historias.html" aria-current="page">Historias</a>
+      <a href="medicos.html">Médicos</a>
+    </nav>
+    <div class="sesion">
+      <span data-rol></span>
+      <button type="button" data-salir>Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="contenido">
+    <header class="encabezado">
+      <div>
+        <p class="etiqueta">Atención clínica</p>
+        <h1>Historias clínicas</h1>
+        <p id="modo-consulta" class="secundario" hidden>Modo de solo consulta</p>
+      </div>
+      <button id="nueva-historia" class="boton primario" type="button" hidden>Nueva historia</button>
+    </header>
+
+    <p id="aviso" class="aviso" role="status"></p>
+    <section class="tarjeta listado" aria-labelledby="titulo-listado">
+      <div class="cabecera-historias">
+        <h2 id="titulo-listado">Atenciones registradas</h2>
+        <div class="filtro-historias">
+          <label for="filtro-paciente">Filtrar por paciente</label>
+          <select id="filtro-paciente" disabled>
+            <option value="">Todos los pacientes</option>
+          </select>
+        </div>
+      </div>
+      <p id="estado-listado" role="status">Cargando historias…</p>
+      <div class="tabla-contenedor" role="region" aria-labelledby="titulo-listado" tabindex="0" hidden>
+        <table aria-labelledby="titulo-listado">
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Paciente</th>
+              <th scope="col">Médico</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="filas-historias"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="editor" aria-labelledby="titulo-editor">
+    <form id="formulario-historia">
+      <h2 id="titulo-editor"></h2>
+      <div class="campos">
+        <div>
+          <label for="paciente_id">Paciente</label>
+          <select id="paciente_id" name="paciente_id" required>
+            <option value="" disabled selected>Selecciona un paciente</option>
+          </select>
+        </div>
+        <div>
+          <label for="medico_id">Médico</label>
+          <select id="medico_id" name="medico_id" required>
+            <option value="" disabled selected>Selecciona un médico</option>
+          </select>
+        </div>
+        <div>
+          <label for="fecha">Fecha de atención</label>
+          <input type="date" id="fecha" name="fecha" required>
+        </div>
+        <div class="campo-clinico">
+          <label for="motivo_consulta">Motivo de consulta</label>
+          <textarea id="motivo_consulta" name="motivo_consulta" rows="2" required></textarea>
+        </div>
+        <div class="campo-clinico">
+          <label for="diagnostico">Diagnóstico</label>
+          <textarea id="diagnostico" name="diagnostico" rows="2" required></textarea>
+        </div>
+        <div class="campo-clinico">
+          <label for="tratamiento">Tratamiento</label>
+          <textarea id="tratamiento" name="tratamiento" rows="2" required></textarea>
+        </div>
+      </div>
+      <p id="error-editor" class="error" role="alert"></p>
+      <div class="acciones-dialogo">
+        <button id="cancelar-editor" class="boton" type="button">Cancelar</button>
+        <button class="boton primario" type="submit">Guardar historia</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detalle" aria-labelledby="titulo-detalle">
+    <h2 id="titulo-detalle">Detalle de la atención</h2>
+    <dl id="datos-detalle"></dl>
+    <form method="dialog" class="acciones-dialogo">
+      <button class="boton primario" type="submit">Cerrar</button>
+    </form>
+  </dialog>
+</body>
+</html>

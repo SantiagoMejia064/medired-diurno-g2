@@ -1,0 +1,26 @@
+.cabecera-historias {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .75rem 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.cabecera-historias h2 { padding: 0; }
+.filtro-historias { width: min(100%, 17rem); }
+.campo-clinico { grid-column: 1 / -1; }
+
+.campo-clinico textarea {
+  display: block;
+  width: 100%;
+  padding: .5rem .65rem;
+  border: 1px solid #A9BEBA;
+  border-radius: .6rem;
+  color: var(--texto);
+  background: white;
+  font: inherit;
+  resize: vertical;
+}
+
+#datos-detalle dd { white-space: pre-wrap; }

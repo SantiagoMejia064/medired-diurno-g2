@@ -1,17 +1,27 @@
-// =====================================================================
-// CAPA DE PRESENTACIÓN (rutas)
-// Asocia cada método HTTP + URI con una función del controlador.
-// =====================================================================
+
+ // =====================================================================
+ // CAPA DE PRESENTACIÓN (rutas)
+ // Asocia cada método HTTP + URI con una función del controlador.
+ // Taller 2: Autenticación JWT y autorización por roles.
+ // =====================================================================
 
 const { Router } = require('express');
 const controller = require('../controllers/medicos.controller');
 
+const { verificarToken, requiereRol } = require('../middlewares/auth');
+
 const router = Router();
 
-router.get('/', controller.listar);      // listar todos los médicos
-router.get('/:id', controller.obtener);  // obtener un médico por id
-router.post('/', controller.crear);      // crear un médico
+// Todas las rutas de médicos requieren un token JWT válido
+router.use(verificarToken);
 
-// Taller 2: agregar PUT /:id (actualizar) y DELETE /:id (eliminar)
+// Consultas: cualquier usuario autenticado
+router.get('/', controller.listar);
+router.get('/:id', controller.obtener);
+
+// Modificaciones: solo el administrador
+router.post('/', requiereRol('administrador'), controller.crear);
+router.put('/:id', requiereRol('administrador'), controller.actualizar);
+router.delete('/:id', requiereRol('administrador'), controller.eliminar);
 
 module.exports = router;

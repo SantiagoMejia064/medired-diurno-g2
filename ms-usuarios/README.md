@@ -1,48 +1,74 @@
-# ms-usuarios · Plantilla del Taller 1 (Módulo 3)
+# ms-usuarios · versión completa (Módulo 3)
 
-Redes y Servicios Multimedia · UAO · Microservicio de **usuarios** de la aplicación,
-con **Node.js + Express** organizado en capas. Es el microservicio común de todos los grupos
-y, en esta versión, la plantilla para construir el suyo: cópienla y adapten **todas** las capas
-a su propia entidad.
-
-Esta es la versión del Taller 1: datos en memoria y tres operaciones. La versión completa
-(MySQL, contraseña cifrada, inicio de sesión y tokens JWT) se entrega en el Taller 3.
+Redes y Servicios Multimedia · UAO. Microservicio común de todos los grupos:
+gestiona los usuarios de la aplicación, guarda las contraseñas cifradas (bcrypt)
+y entrega tokens JWT al iniciar sesión. **Nadie del grupo lo modifica**: se configura con su `.env`.
 
 ## Cómo ejecutarlo
 
-Requisitos: Node.js LTS 22 o superior (`node -v`).
+Requisitos: Node.js 22.9 o superior y MySQL 8.
 
+1. Crear la base de datos y su usuario (como root, en MySQL Workbench o la consola):
+
+```sql
+CREATE DATABASE usuarios_db;
+CREATE USER 'usuarios_user'@'localhost' IDENTIFIED BY 'una-clave-segura';
+GRANT ALL PRIVILEGES ON usuarios_db.* TO 'usuarios_user'@'localhost';
 ```
-npm install                 # descarga Express en node_modules
-copy .env.example .env      # en Windows (en Linux/Mac: cp .env.example .env)
-npm run dev                 # inicia y se reinicia solo al guardar cambios
+
+2. Crear la tabla con `db/schema.sql` (Workbench: File → Open SQL Script, o en la consola `SOURCE db/schema.sql;`).
+3. `npm install`
+4. Copiar `.env.example` como `.env` y ajustar los roles de su empresa y el `JWT_SECRET` del grupo.
+5. `npm run dev`
+
+Usuario inicial: `admin@empresa.com` / `Admin2026*` (rol administrador).
+
+## Endpoints
+
+| Método | URI | Quién | Respuesta exitosa | Errores |
+|---|---|---|---|---|
+| GET | /health | Público | 200 | — |
+| POST | /usuarios/login | Público | 200 `{ token, usuario }` | 401 email o contraseña incorrectos |
+| GET | /usuarios | administrador | 200 arreglo (filtros `?rol=` y `?ids=`) | 401 · 403 |
+| GET | /usuarios/me | Cualquier rol | 200 los datos del dueño del token | 401 |
+| GET | /usuarios/:id | administrador, o el propio usuario | 200 usuario | 400 · 401 · 403 · 404 |
+| POST | /usuarios | administrador | 201 usuario + Location | 400 · 401 · 403 · 409 |
+| PUT | /usuarios/:id | administrador | 200 usuario | 400 · 401 · 403 · 404 · 409 |
+| DELETE | /usuarios/:id | administrador | 204 | 401 · 403 · 404 |
+
+Un usuario que no es administrador solo puede consultar su propio registro (`/usuarios/me` o `/usuarios/<su id>`); el resto de operaciones son del administrador.
+
+`password` se envía al crear (mínimo 8 caracteres) y es opcional al actualizar.
+**Nunca aparece en una respuesta.**
+
+## El token
+
+`POST /usuarios/login` con `{"email": "...", "password": "..."}` responde:
+
+```json
+{ "token": "eyJhbGciOi...", "usuario": { "id": 1, "nombre": "...", "email": "...", "rol": "administrador", "activo": true } }
 ```
 
-Prueben en el navegador: http://localhost:3001/health y http://localhost:3001/usuarios
+Las demás peticiones, en este y en todos los microservicios del grupo, envían la cabecera
+`Authorization: Bearer <token>`. El token lleva `{ id, nombre, rol }`, vence según `JWT_EXPIRA`
+y se verifica con `JWT_SECRET`, que debe ser **la misma en todos los microservicios del grupo**.
 
-## Capas
+## El middleware para los demás microservicios
 
-| Archivo                                 | Capa              | Responsabilidad                                                         |
-| --------------------------------------- | ----------------- | ----------------------------------------------------------------------- |
-| src/index.js                            | Arranque          | Lee PORT y HOST y pone el servidor a escuchar                           |
-| src/app.js                              | Configuración     | Middlewares, /health, montaje de rutas, manejo de errores               |
-| src/routes/usuarios.routes.js           | Presentación      | Método HTTP + URI → función del controlador                             |
-| src/controllers/usuarios.controller.js  | Presentación      | Lee la petición, llama al servicio, arma la respuesta                   |
-| src/services/usuarios.service.js        | Lógica de negocio | Validaciones y reglas (email único); no conoce HTTP ni la base de datos |
-| src/repositories/usuarios.repository.js | Acceso a datos    | Guarda y consulta (en memoria en el Taller 1)                           |
-| src/models/usuario.js                   | Modelo            | Atributos de la entidad y su validación                                 |
-| src/utils/http-error.js                 | Utilidad          | Error con código de estado HTTP                                         |
+`src/middlewares/auth.js` se copia **sin cambios** a cada microservicio del grupo
+(junto con `npm install jsonwebtoken`). Ofrece:
 
-## Endpoints (Taller 1)
+- `verificarToken`: exige un token válido → 401 si falta, es inválido o venció.
+- `requiereRol('rol1', 'rol2')`: deja pasar solo esos roles → 403 a los demás.
 
-| Método | URI           | Respuesta                                                     |
-| ------ | ------------- | ------------------------------------------------------------- |
-| GET    | /health       | 200 `{"servicio":"ms-usuarios","estado":"ok"}`                |
-| GET    | /usuarios     | 200 arreglo de usuarios                                       |
-| GET    | /usuarios/:id | 200 usuario · 400 id inválido · 404 no existe                 |
-| POST   | /usuarios     | 201 usuario creado · 400 datos inválidos · 409 email repetido |
+## CORS (frontend en su PC)
 
-Ejemplo de cuerpo para POST:
-`{"nombre": "Marta Ríos", "email": "marta.rios@empresa.com", "rol": "despacho"}`
+ms-usuarios tiene CORS activo (`app.use(cors())` en `src/app.js`). Así, un frontend abierto
+en el navegador desde otra dirección (doble clic en el HTML, o Live Server en otro puerto)
+puede llamar a `http://localhost:3001`. Sin CORS, el navegador bloquea la respuesta y en la
+consola aparece *blocked by CORS policy*.
 
-Los roles válidos se configuran en el archivo .env (`ROLES=administrador,despacho,flota`).
+Para conectar las pantallas de su entidad con su propio microservicio, hagan lo mismo en él:
+`npm install cors` y `app.use(cors());` antes de `app.use(express.json());`.
+
+En el Taller 3, detrás del gateway, el frontend y la API comparten dirección y CORS ya no hace falta.
