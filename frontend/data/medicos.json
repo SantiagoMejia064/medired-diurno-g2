@@ -1,5 +1,24 @@
+
 [
-  { "id": 1, "nombre": "Ana Salazar", "especialidad": "Medicina general", "sede": "Cali" },
-  { "id": 2, "nombre": "Daniel Vargas", "especialidad": "Medicina interna", "sede": "Bogotá" },
-  { "id": 3, "nombre": "Camila Gómez", "especialidad": "Medicina familiar", "sede": "Medellín" }
+  {
+    "id": 1,
+    "nombre": "Ana Salazar",
+    "registro_medico": "RM-001",
+    "especialidad": "Medicina general",
+    "sede": "Cali"
+  },
+  {
+    "id": 2,
+    "nombre": "Daniel Vargas",
+    "registro_medico": "RM-002",
+    "especialidad": "Medicina interna",
+    "sede": "Bogotá"
+  },
+  {
+    "id": 3,
+    "nombre": "Camila Gómez",
+    "registro_medico": "RM-003",
+    "especialidad": "Medicina familiar",
+    "sede": "Medellín"
+  }
 ]
