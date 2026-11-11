@@ -1,0 +1,5 @@
+[
+  { "id": 1, "paciente_id": 1, "medico_id": 1, "fecha_hora": "2027-06-15T09:00", "sede": "Cali", "estado": "programada" },
+  { "id": 2, "paciente_id": 2, "medico_id": 2, "fecha_hora": "2027-06-16T10:30", "sede": "Bogotá", "estado": "programada" },
+  { "id": 3, "paciente_id": 3, "medico_id": 3, "fecha_hora": "2027-06-17T14:00", "sede": "Medellín", "estado": "cancelada" }
+]

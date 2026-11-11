@@ -1,0 +1,5 @@
+[
+  { "id": 1, "nombre": "Laura Méndez", "documento": "SIM-001", "eps": "EPS Demo" },
+  { "id": 2, "nombre": "Mateo Ríos", "documento": "SIM-002", "eps": "EPS Demo" },
+  { "id": 3, "nombre": "Valentina Torres", "documento": "SIM-003", "eps": "EPS Ejemplo" }
+]

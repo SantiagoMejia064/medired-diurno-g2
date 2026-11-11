@@ -1,54 +1,94 @@
 // =====================================================================
 // CAPA DE ACCESO A DATOS (repositorio)
-// Única capa que sabe DÓNDE se guardan los datos.
-// Versión del Taller 1: datos en memoria (se pierden al reiniciar).
-// En el Taller 2 se reemplaza por MySQL SIN tocar las otras capas.
-// Todas las funciones son async (devuelven promesas) para que el cambio
-// a una base de datos real no obligue a modificar la capa de servicio.
+// Consulta y modifica las historias almacenadas en MySQL.
+// Conserva la interfaz utilizada por la capa de servicio.
 // =====================================================================
-const historias = [
-  {
-    id: 1,
-    paciente_id: 1,
-    medico_id: 2,
-    fecha: '2026-10-27',
-    motivo_consulta: 'Motivo de consulta de ejemplo',
-    diagnostico: 'Diagnóstico de ejemplo',
-    tratamiento: 'Tratamiento de ejemplo',
-  },
-  {
-    id: 2,
-    paciente_id: 2,
-    medico_id: 1,
-    fecha: '2026-10-26',
-    motivo_consulta: 'Motivo de consulta de ejemplo 2',
-    diagnostico: 'Diagnóstico de ejemplo 2',
-    tratamiento: 'Tratamiento de ejemplo 2',
-  },
-  {
-    id: 3,
-    paciente_id: 3,
-    medico_id: 2,
-    fecha: '2026-10-27',
-    motivo_consulta: 'Motivo de consulta de ejemplo 3',
-    diagnostico: 'Diagnóstico de ejemplo 3',
-    tratamiento: 'Tratamiento de ejemplo 3',
-  },
-];
-let siguienteId = 4;
+const pool = require('../db');
 
-async function findAll() {
-  return historias;
+async function findAll(filtros = {}) {
+  let sql = 'SELECT * FROM historias';
+  const valores = [];
+
+  if (filtros.paciente_id !== undefined) {
+    sql += ' WHERE paciente_id = ?';
+    valores.push(filtros.paciente_id);
+  }
+
+  const [filas] = await pool.query(
+    sql + ' ORDER BY id',
+    valores
+  );
+
+  return filas;
 }
 
 async function findById(id) {
-  return historias.find((historia) => historia.id === id) || null;
+  const [filas] = await pool.query(
+    'SELECT * FROM historias WHERE id = ?',
+    [id]
+  );
+
+  return filas.length > 0 ? filas[0] : null;
 }
 
 async function create(historia) {
-  const nuevo = { id: siguienteId++, ...historia };
-  historias.push(nuevo);
-  return nuevo;
+  const [resultado] = await pool.query(
+    `INSERT INTO historias (
+      paciente_id,
+      medico_id,
+      fecha,
+      motivo_consulta,
+      diagnostico,
+      tratamiento
+    ) VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      historia.paciente_id,
+      historia.medico_id,
+      historia.fecha,
+      historia.motivo_consulta,
+      historia.diagnostico,
+      historia.tratamiento,
+    ]
+  );
+
+  return findById(resultado.insertId);
 }
 
-module.exports = { findAll, findById, create };
+async function update(id, historia) {
+  const [resultado] = await pool.query(
+    `UPDATE historias SET
+      paciente_id = ?,
+      medico_id = ?,
+      fecha = ?,
+      motivo_consulta = ?,
+      diagnostico = ?,
+      tratamiento = ?
+    WHERE id = ?`,
+    [
+      historia.paciente_id,
+      historia.medico_id,
+      historia.fecha,
+      historia.motivo_consulta,
+      historia.diagnostico,
+      historia.tratamiento,
+      id,
+    ]
+  );
+
+  if (resultado.affectedRows === 0) {
+    return null;
+  }
+
+  return findById(id);
+}
+
+async function remove(id) {
+  const [resultado] = await pool.query(
+    'DELETE FROM historias WHERE id = ?',
+    [id]
+  );
+
+  return resultado.affectedRows > 0;
+}
+
+module.exports = { findAll, findById, create, update, remove };

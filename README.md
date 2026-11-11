@@ -19,8 +19,8 @@ Aplicación web para la gestión de servicios médicos de MediRed IPS, desarroll
 | Carpeta      | Entidad            | Responsable    | Puerto | Depende de               |
 | ------------ | ------------------ | -------------- | ------ | ------------------------ |
 | ms-usuarios  | Usuarios           | Docente        | 3001   | Ninguno                  |
-| ms-pacientes | Pacientes          | Valentina Ochoa| 3002   | Ninguno                  |
-| ms-medicos   | Médicos            | Jean Chantre   | 3003   | Ninguno                  |
+| ms-pacientes | Pacientes          | [Integrante]   | 3002   | Ninguno                  |
+| ms-medicos   | Médicos            | [Integrante]   | 3003   | Ninguno                  |
 | ms-citas     | Citas médicas      | Santiago Mejía | 3004   | ms-pacientes, ms-medicos |
 | ms-historias | Historias clínicas | Steven Franco  | 3005   | ms-pacientes, ms-medicos |
 

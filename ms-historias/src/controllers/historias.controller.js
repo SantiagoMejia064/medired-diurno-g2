@@ -12,22 +12,60 @@ function leerId(req) {
   return id;
 }
 
-// GET /historias
-async function listar(req, res) {
-  const historias = await service.listar();
-  res.status(200).json(historias);
-}
 
 // GET /historias/:id
 async function obtener(req, res) {
-  const historias = await service.obtener(leerId(req));
+  const historias = await service.obtener(leerId(req), req.headers.authorization);
   res.status(200).json(historias);
 }
 
 // POST /historias
 async function crear(req, res) {
-  const nuevo = await service.crear(req.body);
+  const nuevo = await service.crear(req.body, req.headers.authorization);
   res.status(201).location(`${req.baseUrl}/${nuevo.id}`).json(nuevo);
 }
 
-module.exports = { listar, obtener, crear };
+// PUT /historias/:id
+async function actualizar(req, res) {
+  const actualizada = await service.actualizar(
+    leerId(req),
+    req.body,
+    req.headers.authorization
+  );
+
+  res.status(200).json(actualizada);
+}
+
+// DELETE /historias/:id
+async function eliminar(req, res) {
+  await service.eliminar(leerId(req));
+
+  res.status(204).end();
+}
+
+// GET /historias?paciente_id=... listar historias filtradas por paciente_id
+async function listar(req, res) {
+  const filtros = {};
+
+  if (req.query.paciente_id !== undefined) {
+    const pacienteId = Number(req.query.paciente_id);
+
+    if (
+      typeof req.query.paciente_id !== 'string' ||
+      !Number.isInteger(pacienteId) ||
+      pacienteId <= 0
+    ) {
+      throw new HttpError(
+        400,
+        'paciente_id debe ser un entero positivo'
+      );
+    }
+
+    filtros.paciente_id = pacienteId;
+  }
+
+  const historias = await service.listar(filtros, req.headers.authorization);
+  res.status(200).json(historias);
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar };
