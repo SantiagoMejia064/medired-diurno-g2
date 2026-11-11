@@ -1,4 +1,3 @@
-citascitas
 -- Esquema de la base de datos del microservicio ms-citas.
 SET NAMES utf8mb4;
 
