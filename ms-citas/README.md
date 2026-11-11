@@ -4,9 +4,17 @@ Microservicio REST para la gestión de citas médicas de MediRed IPS, desarrolla
 
 Permite consultar, crear, actualizar y eliminar citas médicas, aplicando validaciones y reglas de disponibilidad de horarios.
 
+**Responsable:** Santiago Mejía Suárez  
 **Puerto:** 3004
 
 ## Instalación y ejecución
+
+### Requisitos
+
+- Node.js compatible con `--env-file-if-exists` (versión 22 o posterior) y npm.
+- MySQL en ejecución, con acceso para crear una base de datos y un usuario.
+- Para las relaciones REST: `ms-pacientes` (3002) y `ms-medicos` (3003).
+- Para obtener un JWT: `ms-usuarios` (3001).
 
 Desde la carpeta `ms-citas`, instalar las dependencias:
 
@@ -14,7 +22,35 @@ Desde la carpeta `ms-citas`, instalar las dependencias:
 npm install
 ```
 
-Crear la base de datos `citas_db` en MySQL y ejecutar `db/schema.sql` para generar la tabla y sus tres registros iniciales.
+### Crear la base de datos
+
+Desde MySQL Workbench o la consola, con una cuenta administradora, ejecutar:
+
+```sql
+CREATE DATABASE IF NOT EXISTS citas_db
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'citas_user'@'localhost'
+  IDENTIFIED BY 'REEMPLAZAR_CON_CLAVE_SEGURA';
+
+GRANT ALL PRIVILEGES ON citas_db.* TO 'citas_user'@'localhost';
+```
+
+La contraseña del ejemplo debe reemplazarse por una clave privada antes de ejecutar el comando. Si el usuario ya existe, no se debe volver a crearlo; se utilizan sus credenciales actuales.
+
+A continuación, desde la carpeta `ms-citas`, iniciar la consola MySQL con el usuario del servicio:
+
+```bash
+mysql -u citas_user -p
+```
+
+En la consola MySQL, ejecutar:
+
+```sql
+SOURCE db/schema.sql;
+```
+
+El archivo `db/schema.sql` selecciona `citas_db`, crea la tabla `citas` y carga tres registros iniciales. El usuario de la base de datos y la clave configurados deben coincidir con `DB_USER` y `DB_PASSWORD` del archivo `.env`.
 
 Copiar `.env.example` a `.env` y configurar las variables de entorno necesarias:
 
@@ -55,33 +91,122 @@ Disponible en `http://localhost:3004`.
 | Conexión      | Administra las conexiones mediante `src/db.js`.      |
 | Clientes HTTP | Consultan otros microservicios mediante REST.        |
 
-## Endpoints
+## Representación y atributos
 
-| Método | Ruta                       | Descripción                       |
-| ------ | -------------------------- | --------------------------------- |
-| GET    | `/health`                  | Verificar el estado del servicio. |
-| GET    | `/citas`                   | Listar todas las citas.           |
-| GET    | `/citas?estado=programada` | Filtrar citas por estado.         |
-| GET    | `/citas/:id`               | Consultar una cita por ID.        |
-| POST   | `/citas`                   | Registrar una nueva cita.         |
-| PUT    | `/citas/:id`               | Actualizar una cita existente.    |
-| DELETE | `/citas/:id`               | Eliminar una cita.                |
-
-## Ejemplo de creación
-
-**POST `/citas`**
+Las citas se intercambian como objetos JSON. Un registro contiene los siguientes atributos:
 
 ```json
 {
+  "id": 4,
   "paciente_id": 1,
-  "medico_id": 2,
+  "medico_id": 1,
   "fecha_hora": "2027-06-15T09:00",
   "sede": "Cali",
   "estado": "programada"
 }
 ```
 
-El identificador `id` se genera automáticamente. Para actualizar una cita mediante PUT se envían sus atributos completos, conservando el ID indicado en la URL.
+| Atributo | Tipo JSON | Obligatorio al crear | Regla |
+| --- | --- | --- | --- |
+| `id` | Número entero | No; generado por MySQL | Identificador positivo y único. |
+| `paciente_id` | Número entero | Sí | Entero positivo; debe existir en `ms-pacientes`. |
+| `medico_id` | Número entero | Sí | Entero positivo; debe existir en `ms-medicos`. |
+| `fecha_hora` | Cadena de texto | Sí | Formato `AAAA-MM-DDTHH:mm`; fecha y hora válidas y futuras. |
+| `sede` | Cadena de texto | Sí | `Cali`, `Bogotá` o `Medellín`. |
+| `estado` | Cadena de texto | No | `programada`, `atendida` o `cancelada`; por defecto `programada`. |
+
+En las respuestas GET, POST y PUT se agregan los objetos `paciente` y `medico` con información obtenida de los microservicios relacionados. Si alguno no está disponible durante una consulta, el objeto correspondiente puede ser `null` y se agrega `aviso`.
+
+## Endpoints
+
+| Operación | Método | URI | Cuerpo | Respuesta exitosa | Errores posibles |
+| --- | --- | --- | --- | --- | --- |
+| Listar | GET | `/citas` | — | `200` + arreglo de citas | `401` |
+| Filtrar por estado | GET | `/citas?estado=programada` | — | `200` + arreglo filtrado | `401` |
+| Obtener | GET | `/citas/:id` | — | `200` + objeto de cita | `400`, `401`, `404` |
+| Crear | POST | `/citas` | JSON sin `id` | `201` + objeto y cabecera `Location` | `400`, `401`, `403`, `409`, `502`, `503` |
+| Actualizar | PUT | `/citas/:id` | JSON completo sin `id` | `200` + objeto actualizado | `400`, `401`, `403`, `404`, `409`, `502`, `503` |
+| Eliminar | DELETE | `/citas/:id` | — | `204` sin cuerpo | `400`, `401`, `403`, `404` |
+
+**Comprobación pública:** `GET /health` responde `200 OK` sin token.
+
+## Ejemplo de creación
+
+Solicitud **POST `/citas`**, con JWT de administrador o admisiones:
+
+```json
+{
+  "paciente_id": 1,
+  "medico_id": 1,
+  "fecha_hora": "2027-06-15T09:00",
+  "sede": "Cali",
+  "estado": "programada"
+}
+```
+
+Respuesta de ejemplo **`201 Created`** (el ID depende de los registros existentes):
+
+```http
+Location: /citas/4
+```
+
+```json
+{
+  "id": 4,
+  "paciente_id": 1,
+  "medico_id": 1,
+  "fecha_hora": "2027-06-15T09:00",
+  "sede": "Cali",
+  "estado": "programada",
+  "paciente": {
+    "id": 1,
+    "nombre": "María Fernanda López",
+    "documento": "1001234567",
+    "eps": "Sura"
+  },
+  "medico": {
+    "id": 1,
+    "nombre": "Carlos Ramírez",
+    "especialidad": "Cardiología",
+    "sede": "Cali"
+  }
+}
+```
+
+Para actualizar mediante PUT, se envían los atributos completos en el cuerpo JSON y se conserva el identificador indicado en la URL.
+
+## Ejemplo de listado
+
+Solicitud **GET `/citas`**, con JWT válido:
+
+Respuesta de ejemplo **`200 OK`**, con un arreglo de citas:
+
+```json
+[
+  {
+    "id": 4,
+    "paciente_id": 1,
+    "medico_id": 1,
+    "fecha_hora": "2027-06-15T09:00",
+    "sede": "Cali",
+    "estado": "programada",
+    "paciente": {
+      "id": 1,
+      "nombre": "María Fernanda López",
+      "documento": "1001234567",
+      "eps": "Sura"
+    },
+    "medico": {
+      "id": 1,
+      "nombre": "Carlos Ramírez",
+      "especialidad": "Cardiología",
+      "sede": "Cali"
+    }
+  }
+]
+```
+
+Para filtrar los registros se utiliza, por ejemplo, `GET /citas?estado=programada`.
 
 ## Validaciones y reglas de negocio
 
