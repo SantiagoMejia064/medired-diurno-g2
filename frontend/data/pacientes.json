@@ -1,5 +1,27 @@
+
 [
-  { "id": 1, "nombre": "Laura Méndez", "documento": "SIM-001", "eps": "EPS Demo" },
-  { "id": 2, "nombre": "Mateo Ríos", "documento": "SIM-002", "eps": "EPS Demo" },
-  { "id": 3, "nombre": "Valentina Torres", "documento": "SIM-003", "eps": "EPS Ejemplo" }
+  {
+    "id": 1,
+    "nombre": "Maria Zambrano",
+    "documento": "108496801",
+    "fecha_nacimiento": "1998-05-15",
+    "eps": "Sura",
+    "telefono": "3104567890"
+  },
+  {
+    "id": 2,
+    "nombre": "Carlos Andrés Ramírez",
+    "documento": "1023456789",
+    "fecha_nacimiento": "1988-09-25",
+    "eps": "Sanitas",
+    "telefono": "3109876543"
+  },
+  {
+    "id": 3,
+    "nombre": "Laura Camila Torres",
+    "documento": "1145678901",
+    "fecha_nacimiento": "2001-01-18",
+    "eps": "Nueva EPS",
+    "telefono": "3154567890"
+  }
 ]
