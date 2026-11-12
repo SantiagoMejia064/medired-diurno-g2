@@ -1,0 +1,968 @@
+{
+  "info": {
+    "name": "ms-historias",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "MediRed IPS · Taller 2. Ejecuta primero los inicios de sesión de Médico y Admisiones en ms-usuarios — Acceso para Historias con MediRed local seleccionado. Caso 03 no aplica. Los casos 23 y 24 requieren detener solo Médicos. Usa datos ficticios en el entorno local."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token_medico}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 - Estado del servicio",
+      "item": [
+        {
+          "name": "Estado del servicio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Servicio y estado\", function () {",
+                  "  const estado = pm.response.json();",
+                  "  pm.expect(estado.servicio).to.equal('ms-historias');",
+                  "  pm.expect(estado.estado).to.equal('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/health",
+            "description": "Comprueba que Historias responde.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 - CRUD y filtro",
+      "description": "Ejecuta del 01 al 11. Haz la comprobación de persistencia antes del 12. El caso 03 se anota como No aplica en el informe.",
+      "item": [
+        {
+          "name": "01 - Listar historias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"La respuesta es un arreglo\", function () {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias",
+            "description": "Devuelve el listado."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Filtrar por paciente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"El filtro coincide con el paciente\", function () {",
+                  "  const historias = pm.response.json();",
+                  "  const id = Number(pm.environment.get('paciente_id'));",
+                  "  pm.expect(historias).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(historias.every(historia => historia.paciente_id === id)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias?paciente_id={{paciente_id}}",
+            "description": "Usa un paciente que tenga al menos una historia."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Obtener una historia existente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Identificador esperado\", function () {",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('historia_existente_id')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{historia_existente_id}}",
+            "description": "Ajusta historia_existente_id al registro de ejemplo."
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Obtener historia inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe la historia\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{id_inexistente}}",
+            "description": "Usa un identificador que no exista."
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Obtener con ID no numérico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"entero positivo\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias/abc",
+            "description": "El ID de la ruta debe ser un entero positivo."
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Crear historia válida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Identificador y cabecera Location\", function () {",
+                  "  const id = pm.response.json().id;",
+                  "  pm.expect(id).to.be.a('number').and.above(0);",
+                  "  pm.expect(pm.response.headers.get('Location')).to.equal('/historias/' + id);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const id = pm.response.json().id;",
+                  "  if (Number.isInteger(id) && id > 0) {",
+                  "    pm.environment.set('caso_07_id', String(id));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Crea el registro ficticio del CRUD y guarda su ID automáticamente en caso_07_id. Usa el mismo ID para actualizar, comprobar persistencia y eliminar. Captura el resultado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - atención ficticia\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 - Crear sin diagnóstico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Diagnóstico obligatorio\", function () {",
+                  "  const detalles = pm.response.json().detalles;",
+                  "  pm.expect(detalles.some(detalle => detalle.includes('diagnostico'))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Omite el diagnóstico en el cuerpo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - falta diagnóstico\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09 - Crear con fecha futura",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"no puede ser futura\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Comprueba la regla de fecha. Captura el resultado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"2099-01-01\",\n  \"motivo_consulta\": \"Taller 2 - fecha futura\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10 - Actualizar historia creada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Identificador esperado\", function () {",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('caso_07_id')));",
+                  "});",
+                  "pm.test(\"Motivo actualizado\", function () {",
+                  "  pm.expect(pm.response.json().motivo_consulta).to.equal(\"Taller 2 - atención ficticia actualizada\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias/{{caso_07_id}}",
+            "description": "Usa el ID del caso 07 y cambia el motivo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - atención ficticia actualizada\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 - Actualizar historia inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe la historia\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias/{{id_inexistente}}",
+            "description": "Envía referencias válidas con un ID de historia inexistente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - actualizar historia inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Persistencia - Consultar después de reiniciar Historias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Identificador esperado\", function () {",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('caso_07_id')));",
+                  "});",
+                  "pm.test(\"Motivo actualizado\", function () {",
+                  "  pm.expect(pm.response.json().motivo_consulta).to.equal(\"Taller 2 - atención ficticia actualizada\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{caso_07_id}}",
+            "description": "Ejecuta después del caso 10. Reinicia solo ms-historias, ejecuta este GET y consulta el mismo ID en Workbench. Guarda ambas capturas antes del caso 12."
+          },
+          "response": []
+        },
+        {
+          "name": "12 - Eliminar la historia del caso 07",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});",
+                  "pm.test(\"La respuesta está vacía\", function () {",
+                  "  pm.expect(pm.response.text()).to.equal('');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{caso_07_id}}",
+            "description": "Elimina únicamente el registro ficticio creado en el caso 07. Ejecuta después de comprobar persistencia. Captura el resultado."
+          },
+          "response": []
+        },
+        {
+          "name": "13 - Repetir la eliminación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe la historia\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{caso_07_id}}",
+            "description": "Repite la eliminación del mismo ID. Captura el resultado."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Seguridad",
+      "description": "Captura los casos 14 a 18 con el código visible. Médico puede escribir y Admisiones solo consulta.",
+      "item": [
+        {
+          "name": "14 - Listar sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"Falta el token\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias",
+            "description": "Ejecuta con No Auth.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "15 - Listar con token inválido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"Token inválido o vencido\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias",
+            "description": "Envía un valor ficticio como Bearer Token.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "token-invalido",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "16 - Listar como Admisiones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"La respuesta es un arreglo\", function () {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias",
+            "description": "Admisiones puede consultar.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admisiones}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "17 - Crear como Admisiones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"admisiones no tiene permiso\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Comprueba el rechazo de escritura para el rol de consulta.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admisiones}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - permisos de Admisiones\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "18 - Crear como Médico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Identificador y cabecera Location\", function () {",
+                  "  const id = pm.response.json().id;",
+                  "  pm.expect(id).to.be.a('number').and.above(0);",
+                  "  pm.expect(pm.response.headers.get('Location')).to.equal('/historias/' + id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Comprueba que un médico puede crear historias.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - permisos de Médico\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Relaciones y caída",
+      "description": "Captura los casos 19 a 24. Para 22 registra el tráfico en las terminales. Para 23 y 24 detén solo Médicos y vuelve a iniciarlo al finalizar.",
+      "item": [
+        {
+          "name": "19 - Crear con paciente y médico válidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Identificador y cabecera Location\", function () {",
+                  "  const id = pm.response.json().id;",
+                  "  pm.expect(id).to.be.a('number').and.above(0);",
+                  "  pm.expect(pm.response.headers.get('Location')).to.equal('/historias/' + id);",
+                  "});",
+                  "pm.test(\"Paciente y médico relacionados\", function () {",
+                  "  const historia = pm.response.json();",
+                  "  pm.expect(historia.paciente.id).to.equal(historia.paciente_id);",
+                  "  pm.expect(historia.paciente.nombre).to.be.a('string');",
+                  "  pm.expect(historia.medico.id).to.equal(historia.medico_id);",
+                  "  pm.expect(historia.medico.nombre).to.be.a('string');",
+                  "  pm.expect(historia.medico.especialidad).to.be.a('string');",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const id = pm.response.json().id;",
+                  "  if (Number.isInteger(id) && id > 0) {",
+                  "    pm.environment.set('caso_19_id', String(id));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "La respuesta debe incluir ambos objetos relacionados. Guarda automáticamente el ID para el caso 21.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - relaciones válidas\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "20 - Crear con paciente inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe el paciente\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Usa paciente inexistente y médico válido.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{id_inexistente}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - paciente inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "20b - Crear con médico inexistente (comprobación adicional)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe el médico\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Usa paciente válido y médico inexistente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{id_inexistente}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - médico inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "21 - Consultar historia con sus relaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Identificador esperado\", function () {",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('caso_19_id')));",
+                  "});",
+                  "pm.test(\"Paciente y médico relacionados\", function () {",
+                  "  const historia = pm.response.json();",
+                  "  pm.expect(historia.paciente.id).to.equal(historia.paciente_id);",
+                  "  pm.expect(historia.paciente.nombre).to.be.a('string');",
+                  "  pm.expect(historia.medico.id).to.equal(historia.medico_id);",
+                  "  pm.expect(historia.medico.nombre).to.be.a('string');",
+                  "  pm.expect(historia.medico.especialidad).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{caso_19_id}}",
+            "description": "Usa el ID guardado por el caso 19. Muestra ambos objetos en la captura."
+          },
+          "response": []
+        },
+        {
+          "name": "22 - Listar y comprobar consultas por lote",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"La respuesta es un arreglo\", function () {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias",
+            "description": "Envía una vez con todos los servicios arriba. Captura el 200 junto con una línea GET /pacientes?ids=… y una línea GET /medicos?ids=… en las terminales receptoras. Revisa los logs manualmente."
+          },
+          "response": []
+        },
+        {
+          "name": "23 - Listar con Médicos detenido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Listado parcial con aviso de Médicos\", function () {",
+                  "  const historias = pm.response.json();",
+                  "  pm.expect(historias).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(historias.every(historia => historia.medico === null && historia.aviso.includes('ms-medicos no está disponible'))).to.be.true;",
+                  "  pm.expect(historias.some(historia => historia.paciente !== null)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias",
+            "description": "Detén solo Médicos. La captura debe mostrar medico: null y aviso."
+          },
+          "response": []
+        },
+        {
+          "name": "24 - Crear con Médicos detenido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 503\", function () {",
+                  "  pm.response.to.have.status(503);",
+                  "});",
+                  "pm.test(\"Mensaje de error esperado\", function () {",
+                  "  pm.expect(pm.response.json().error).to.include(\"ms-medicos no está disponible\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "description": "Mantén Médicos detenido y Pacientes activo. Guarda la captura y luego reinicia Médicos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - Médicos detenido\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
