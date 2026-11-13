@@ -17,6 +17,5 @@ router.post('/', requiereRol('administrador'), controller.crear);      // crear 
 router.put('/:id', requiereRol('administrador'), controller.actualizar); //actualizar un paciente
 router.delete('/:id', requiereRol('administrador'), controller.eliminar); //eliminar un paciente
 
-// Taller 2: agregar PUT /:id (actualizar) y DELETE /:id (eliminar)
 
 module.exports = router;
