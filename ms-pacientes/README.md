@@ -1,6 +1,6 @@
 # ms-pacientes · MediRed IPS
 
-Microservicio REST para la gestión de pacientes de MediRed IPS, desarrollado con **Node.js y Express**, utilizando una arquitectura en capas y una base de datos MySQL para el almacenamiento persistente de la información.
+Microservicio REST para la gestión de pacientes de MediRed IPS, desarrollado con **Node.js y Express**, utilizando una arquitectura en capas y una base de datos **MariaDB** para el almacenamiento persistente de la información.
 
 Permite registrar, consultar, actualizar y eliminar pacientes. También ofrece consultas filtradas por EPS y consultas por lotes mediante identificadores. El acceso a los endpoints está protegido mediante autenticación JWT y autorización por roles.
 
@@ -22,16 +22,16 @@ DB_HOST=localhost
 DB_PORT=3307
 DB_NAME=pacientes_db
 DB_USER=pacientes_user
-DB_PASSWORD=tu_contraseña
+DB_PASSWORD=tu_contraseña_local
 
 JWT_SECRET=tu_clave_secreta
 ```
 
-Los valores de conexión deben coincidir con la configuración local de MySQL. El archivo `.env` no debe subirse al repositorio.
+Los valores de conexión deben coincidir con la configuración local de MariaDB. El archivo `.env` contiene información sensible, por lo que no debe subirse al repositorio.
 
-Verificar que la base de datos y la tabla `pacientes` estén creadas. El proyecto incluye el script SQL `db/schema.sql` para definir la estructura de la tabla.
+Antes de iniciar el servicio, se debe verificar que la base de datos `pacientes_db` exista y que se haya seleccionado al ejecutar el script SQL. El proyecto incluye el archivo `db/schema.sql`, que define la estructura de la tabla `pacientes` e inserta registros iniciales.
 
-Iniciar el microservicio:
+Para ejecutar el microservicio en modo desarrollo:
 
 ```bash
 npm run dev
@@ -53,11 +53,12 @@ El proyecto está organizado en capas para separar las responsabilidades de cada
 |---|---|---|
 | Arranque | `src/index.js` | Carga la configuración e inicia el servidor. |
 | Configuración | `src/app.js` | Configura Express, los middlewares, las rutas y el manejo de errores. |
+| Conexión a la base de datos | `src/db.js` | Configura el pool de conexiones con MariaDB mediante `mysql2/promise`. |
 | Rutas | `src/routes/pacientes.routes.js` | Define los endpoints y los permisos de acceso. |
 | Controlador | `src/controllers/pacientes.controller.js` | Recibe las solicitudes HTTP y devuelve las respuestas correspondientes. |
 | Servicio | `src/services/pacientes.service.js` | Aplica las validaciones y las reglas de negocio. |
 | Modelo | `src/models/paciente.js` | Define la estructura de los datos y valida la información del paciente. |
-| Repositorio | `src/repositories/pacientes.repository.js` | Ejecuta las consultas SQL para gestionar los pacientes en MySQL. |
+| Repositorio | `src/repositories/pacientes.repository.js` | Ejecuta las consultas SQL para gestionar los pacientes en la base de datos. |
 | Middleware | `src/middlewars/auth.js` | Verifica los tokens JWT y los permisos según el rol del usuario. |
 | Utilidad | `src/utils/http-error.js` | Permite manejar errores asociados a códigos HTTP. |
 
@@ -77,13 +78,15 @@ Para realizar solicitudes protegidas desde Postman, se debe incluir el siguiente
 Authorization: Bearer <token>
 ```
 
+El token debe ser generado por el microservicio de autenticación de MediRed IPS y contener la información de autorización requerida.
+
 ## Endpoints
 
 ### Verificación del servicio
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/health` | Verifica el estado del microservicio. |
+| Método | Ruta | Descripción | Respuesta exitosa |
+|---|---|---|---|
+| GET | `/health` | Verifica el estado del microservicio. | `200 OK` |
 
 ### Gestión de pacientes
 
@@ -96,6 +99,8 @@ Authorization: Bearer <token>
 | POST | `/pacientes` | Registra un nuevo paciente. | `201 Created` |
 | PUT | `/pacientes/:id` | Actualiza la información de un paciente. | `200 OK` |
 | DELETE | `/pacientes/:id` | Elimina un paciente por su ID. | `204 No Content` |
+
+Todas las rutas de gestión de pacientes requieren autenticación JWT. Las operaciones `POST`, `PUT` y `DELETE` requieren adicionalmente el rol `administrador`.
 
 ### Consultas con filtros
 
@@ -113,7 +118,7 @@ Devuelve los pacientes que pertenecen a la EPS indicada.
 GET /pacientes?ids=3,13
 ```
 
-Permite consultar varios pacientes mediante sus identificadores, separados por comas, en una sola solicitud. Si los identificadores no son enteros positivos, el servicio responde con `400 Bad Request`.
+Permite consultar varios pacientes mediante sus identificadores, separados por comas, en una sola solicitud. Los identificadores deben ser enteros positivos. Si el formato no es válido, el servicio responde con `400 Bad Request`.
 
 Los filtros por EPS y por identificadores se procesan desde el controlador y se aplican en las consultas del repositorio.
 
@@ -148,7 +153,11 @@ Ejemplo de respuesta:
 }
 ```
 
-La respuesta también incluye el encabezado `Location`, que indica la dirección del recurso creado, por ejemplo: `/pacientes/18`.
+La respuesta también incluye el encabezado `Location`, que indica la dirección del recurso creado, por ejemplo:
+
+`/pacientes/18`
+
+**Nota:** el identificador del ejemplo es ilustrativo. El valor real es generado automáticamente por la base de datos.
 
 ## Ejemplo de actualización
 
@@ -167,6 +176,16 @@ Cuerpo de la petición:
 ```
 
 Si el paciente existe y los datos cumplen las validaciones, el servicio responde con `200 OK` y devuelve el registro actualizado.
+
+## Ejemplo de eliminación
+
+**DELETE `/pacientes/18`**
+
+Permite eliminar un paciente mediante su identificador.
+
+Si el registro existe y el usuario tiene permisos de administrador, el servicio responde con `204 No Content`, sin incluir un cuerpo en la respuesta.
+
+Si el paciente no existe, devuelve `404 Not Found`.
 
 ## Validaciones y reglas de negocio
 
@@ -203,17 +222,63 @@ Si el documento pertenece a otro paciente, el servicio responde con `409 Conflic
 
 ## Almacenamiento de datos
 
-La información de los pacientes se almacena de manera persistente en una base de datos **MySQL**. La capa de repositorio se encarga de ejecutar las consultas SQL para listar, buscar, registrar, actualizar y eliminar pacientes.
+La información de los pacientes se almacena de manera persistente en una base de datos **MariaDB**, administrada mediante XAMPP. La conexión desde Node.js se realiza utilizando el paquete `mysql2/promise`, mientras que la capa de repositorio se encarga de ejecutar las consultas SQL para listar, buscar, registrar, actualizar y eliminar pacientes.
 
 La tabla `pacientes` contiene los siguientes campos:
 
-| Campo | Descripción |
-|---|---|
-| `id` | Identificador único autoincremental del paciente. |
-| `nombre` | Nombre completo del paciente. |
-| `documento` | Número de documento, con restricción de unicidad. |
-| `fecha_nacimiento` | Fecha de nacimiento del paciente. |
-| `eps` | Entidad promotora de salud. |
-| `telefono` | Número de contacto del paciente. |
+| Campo | Tipo de dato | Descripción |
+|---|---|---|
+| `id` | `INT` | Identificador único autoincremental del paciente y clave primaria. |
+| `nombre` | `VARCHAR(100)` | Nombre completo del paciente. |
+| `documento` | `VARCHAR(15)` | Número de documento, con restricción de unicidad. |
+| `fecha_nacimiento` | `DATE` | Fecha de nacimiento del paciente. |
+| `eps` | `VARCHAR(100)` | Entidad promotora de salud. |
+| `telefono` | `VARCHAR(10)` | Número de contacto del paciente. |
 
-Gracias a la conexión con MySQL, los registros permanecen almacenados después de reiniciar el microservicio y pueden ser consultados por otros servicios de MediRed IPS mediante los endpoints REST.
+La persistencia permite conservar los registros después de reiniciar el microservicio. Además, los pacientes pueden ser consultados por otros servicios de MediRed IPS mediante los endpoints REST correspondientes.
+
+## Dependencias principales
+
+- **Express:** framework utilizado para construir el servidor y definir las rutas REST.
+- **mysql2:** paquete utilizado para establecer la conexión con MariaDB y ejecutar consultas SQL.
+- **JSON Web Token (JWT):** mecanismo de autenticación y verificación de permisos de acceso.
+
+## Estructura del proyecto
+
+```text
+ms-pacientes/
+│
+├── db/
+│   └── schema.sql
+│
+├── src/
+│   ├── controllers/
+│   │   └── pacientes.controller.js
+│   │
+│   ├── middlewars/
+│   │   └── auth.js
+│   │
+│   ├── models/
+│   │   └── paciente.js
+│   │
+│   ├── repositories/
+│   │   └── pacientes.repository.js
+│   │
+│   ├── routes/
+│   │   └── pacientes.routes.js
+│   │
+│   ├── services/
+│   │   └── pacientes.service.js
+│   │
+│   ├── utils/
+│   │   └── http-error.js
+│   │
+│   ├── app.js
+│   ├── db.js
+│   └── index.js
+│
+├── .env
+├── .gitignore
+├── package.json
+└── package-lock.json
+```
