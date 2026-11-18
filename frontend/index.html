@@ -16,17 +16,14 @@
     </div>
     <p class="etiqueta">Gestión de citas</p>
     <h1>Acceso al panel</h1>
-    <p class="secundario">Selecciona un rol para iniciar la sesión simulada.</p>
-
+    <p class="secundario">Ingresa con las credenciales de tu cuenta institucional.</p>
     <form id="acceso">
-      <label for="rol">Rol de acceso</label>
-      <select id="rol" name="rol" required>
-        <option value="" selected disabled>Selecciona un rol</option>
-        <option value="administrador">Administrador</option>
-        <option value="admisiones">Admisiones</option>
-        <option value="medico">Médico</option>
-      </select>
-      <button class="boton primario" type="submit">Ingresar al panel</button>
+      <label for="email">Correo electrónico</label>
+      <input id="email" name="email" type="email" required autocomplete="username">
+      <label for="password">Contraseña</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+      <button class="boton primario" type="submit">Iniciar sesión</button>
+      <p id="error-acceso" class="error" role="alert" aria-live="polite"></p>
     </form>
   </main>
 </body>

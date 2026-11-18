@@ -77,11 +77,20 @@
         </div>
         <div>
           <label for="sede">Sede</label>
-          <select id="sede" name="sede" required></select>
+          <select id="sede" name="sede" required>
+            <option value="">Selecciona una sede</option>
+            <option value="Bogotá">Bogotá</option>
+            <option value="Cali">Cali</option>
+            <option value="Medellín">Medellín</option>
+          </select>
         </div>
         <div>
           <label for="estado">Estado</label>
-          <select id="estado" name="estado" required></select>
+          <select id="estado" name="estado" required>
+            <option value="programada">Programada</option>
+            <option value="atendida">Atendida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
         </div>
       </div>
       <p id="error-editor" class="error" role="alert"></p>

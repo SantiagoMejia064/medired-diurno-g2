@@ -1,317 +1,187 @@
-import { obtenerRol } from "./sesion.js";
+import { api, apiPost, apiPut, apiDelete } from "./api.js";
+import { obtenerRol, protegerPagina } from "./sesion.js";
 
-const filas = document.querySelector("#filas-medicos");
-const tabla = document.querySelector(".tabla-contenedor");
-const estadoListado = document.querySelector("#estado-listado");
-const detalle = document.querySelector("#detalle");
-const datosDetalle = document.querySelector("#datos-detalle");
-const nuevoMedico = document.querySelector("#nuevo-medico");
-
-const editor = document.querySelector("#editor");
-const formulario = document.querySelector("#formulario-medico");
-const errorEditor = document.querySelector("#error-editor");
-const aviso = document.querySelector("#aviso");
-
-const CLAVE_MEDICOS = "medired.medicos";
-
-const puedeGestionar = obtenerRol() === "administrador";
-
-let medicos = [];
+const CONFIG = {"ruta": "/medicos", "singular": "médico", "plural": "médicos", "filas": "#filas-medicos", "formulario": "#formulario-medico", "botonNuevo": "#nuevo-medico", "rolesEscritura": ["administrador"], "columnas": [{"campo": "nombre"}, {"campo": "registro_medico"}, {"campo": "especialidad"}, {"campo": "sede"}], "detalles": [["Nombre", "nombre"], ["Registro médico", "registro_medico"], ["Especialidad", "especialidad"], ["Sede", "sede"]], "campos": [{"name": "nombre"}, {"name": "registro_medico"}, {"name": "especialidad"}, {"name": "sede"}]};
+const rol = obtenerRol();
+const puedeEscribir = CONFIG.rolesEscritura.includes(rol);
+const $ = (selector) => document.querySelector(selector);
+const filas = $(CONFIG.filas);
+const tabla = $(".tabla-contenedor");
+const estado = $("#estado-listado");
+const aviso = $("#aviso");
+const editor = $("#editor");
+const formulario = $(CONFIG.formulario);
+const errorEditor = $("#error-editor");
+const detalle = $("#detalle");
+const datosDetalle = $("#datos-detalle");
+const botonNuevo = $(CONFIG.botonNuevo);
+let registros = [];
 let idEnEdicion = null;
 
+if (!protegerPagina()) throw new Error("Sesión requerida");
 
-// Crea una celda de la tabla
-function agregarCelda(fila, texto) {
-  const celda = fila.insertCell();
-  celda.textContent = texto;
-  return celda;
+function texto(valor) {
+  if (valor === null || valor === undefined || valor === "") return "No registrado";
+  return String(valor);
 }
-
-
-// Crea un botón de acción
-function crearAccion(texto, ejecutar, clase = "") {
+function crearAccion(etiqueta, accion, clase = "") {
   const boton = document.createElement("button");
   boton.type = "button";
   boton.className = `accion ${clase}`;
-  boton.textContent = texto;
-  boton.addEventListener("click", ejecutar);
+  boton.textContent = etiqueta;
+  boton.addEventListener("click", accion);
   return boton;
 }
-
-
-// Muestra los detalles de un médico
-function mostrarDetalle(medico) {
-  const campos = [
-    ["Nombre", medico.nombre],
-    ["Registro médico", medico.registro_medico],
-    ["Especialidad", medico.especialidad],
-    ["Sede", medico.sede],
-  ];
-
-  datosDetalle.replaceChildren();
-
-  for (const [etiqueta, valor] of campos) {
-    const termino = document.createElement("dt");
-    const descripcion = document.createElement("dd");
-
-    termino.textContent = etiqueta;
-    descripcion.textContent = valor;
-
-    datosDetalle.append(termino, descripcion);
-  }
-
-  detalle.showModal();
+function celda(fila, valor) {
+  const td = fila.insertCell();
+  td.textContent = texto(valor);
+  return td;
 }
-
-
-// Guarda los médicos modificados en localStorage
-function guardarDatos() {
-  localStorage.setItem(CLAVE_MEDICOS, JSON.stringify(medicos));
+function valorRelacionado(registro, campo) {
+  if (campo === "paciente") return registro.paciente?.nombre || `ID ${registro.paciente_id}`;
+  if (campo === "medico") return registro.medico?.nombre || `ID ${registro.medico_id}`;
+  if (campo.includes(".")) return campo.split(".").reduce((obj, key) => obj?.[key], registro);
+  return registro[campo];
 }
-
-
-// Abre el formulario para crear o editar
-function abrirEditor(medico = null) {
-  if (!puedeGestionar) return;
-
-  idEnEdicion = medico?.id ?? null;
-
-  formulario.reset();
-  errorEditor.textContent = "";
-
-  document.querySelector("#titulo-editor").textContent =
-    medico ? "Editar médico" : "Nuevo médico";
-
-  if (medico) {
-    for (const campo of [
-      "nombre",
-      "registro_medico",
-      "especialidad",
-      "sede",
-    ]) {
-      formulario.elements[campo].value = medico[campo];
-    }
-  }
-
-  editor.showModal();
-}
-
-
-// Elimina un médico
-function eliminarMedico(medico) {
-  if (!puedeGestionar) return;
-
-  const confirmar = window.confirm(
-    `¿Eliminar al médico ${medico.nombre}?`
-  );
-
-  if (!confirmar) return;
-
-  medicos = medicos.filter(
-    (registro) => registro.id !== medico.id
-  );
-
-  guardarDatos();
-  renderizarListado();
-
-  aviso.textContent = "Médico eliminado.";
-}
-
-
-// Guarda o actualiza un médico
-function guardarMedico(evento) {
-  evento.preventDefault();
-
-  if (!puedeGestionar) return;
-
-  const datos = new FormData(formulario);
-
-  const medico = {
-    nombre: String(datos.get("nombre")).trim(),
-    registro_medico: String(datos.get("registro_medico")).trim(),
-    especialidad: String(datos.get("especialidad")).trim(),
-    sede: String(datos.get("sede")).trim(),
-  };
-
-  if (
-    !medico.nombre ||
-    !medico.registro_medico ||
-    !medico.especialidad ||
-    !medico.sede
-  ) {
-    errorEditor.textContent =
-      "Todos los campos son obligatorios.";
-    return;
-  }
-
-  if (!["Cali", "Bogotá", "Medellín"].includes(medico.sede)) {
-    errorEditor.textContent =
-      "Selecciona una sede válida.";
-    return;
-  }
-
-  const duplicado = medicos.some(
-    (registro) =>
-      registro.registro_medico.toLowerCase() ===
-        medico.registro_medico.toLowerCase() &&
-      registro.id !== idEnEdicion
-  );
-
-  if (duplicado) {
-    errorEditor.textContent =
-      "El registro médico ya existe.";
-    return;
-  }
-
-  if (idEnEdicion === null) {
-    const nuevoId =
-      Math.max(
-        0,
-        ...medicos.map((registro) => registro.id)
-      ) + 1;
-
-    medicos.push({
-      id: nuevoId,
-      ...medico,
-    });
-
-    aviso.textContent = "Médico creado.";
-  } else {
-    medicos = medicos.map((registro) =>
-      registro.id === idEnEdicion
-        ? {
-            id: registro.id,
-            ...medico,
-          }
-        : registro
-    );
-
-    aviso.textContent = "Médico actualizado.";
-  }
-
-  guardarDatos();
-  renderizarListado();
-
-  editor.close();
-}
-
-
-// Muestra los médicos en la tabla
-function renderizarListado() {
-  const contenido = document.createDocumentFragment();
-
-  for (const medico of medicos) {
+function renderizar() {
+  const fragmento = document.createDocumentFragment();
+  registros.forEach(registro => {
     const fila = document.createElement("tr");
-
-    agregarCelda(fila, medico.nombre);
-    agregarCelda(fila, medico.registro_medico);
-    agregarCelda(fila, medico.especialidad);
-    agregarCelda(fila, medico.sede);
-
+    CONFIG.columnas.forEach(col => {
+      const td = celda(fila, valorRelacionado(registro, col.campo));
+      if (col.campo === "estado") {
+        const etiqueta = document.createElement("span");
+        etiqueta.className = `estado ${registro.estado || ""}`;
+        etiqueta.textContent = texto(registro.estado);
+        td.textContent = "";
+        td.append(etiqueta);
+      }
+    });
     const acciones = document.createElement("div");
     acciones.className = "acciones";
-
-    acciones.append(
-      crearAccion(
-        "Ver detalle",
-        () => mostrarDetalle(medico)
-      )
-    );
-
-    if (puedeGestionar) {
+    acciones.append(crearAccion("Ver", () => verDetalle(registro)));
+    if (puedeEscribir) {
       acciones.append(
-        crearAccion(
-          "Editar",
-          () => abrirEditor(medico)
-        ),
-        crearAccion(
-          "Eliminar",
-          () => eliminarMedico(medico),
-          "peligro"
-        )
+        crearAccion("Editar", () => abrirEditor(registro)),
+        crearAccion("Eliminar", () => eliminarRegistro(registro), "peligro")
       );
     }
-
     fila.insertCell().append(acciones);
-    contenido.append(fila);
-  }
-
-  filas.replaceChildren(contenido);
-
-  tabla.hidden = medicos.length === 0;
-
-  estadoListado.hidden = medicos.length > 0;
-  estadoListado.textContent =
-    "No hay médicos registrados.";
-
-  nuevoMedico.hidden = !puedeGestionar;
-
-  document.querySelector("#modo-consulta").hidden =
-    puedeGestionar;
-}
-
-
-// Carga los datos iniciales
-async function iniciarMedicos() {
-  const respuesta = await fetch("data/medicos.json");
-
-  if (!respuesta.ok) {
-    throw new Error(
-      "No se pudo cargar medicos.json"
-    );
-  }
-
-  const iniciales = await respuesta.json();
-
-  const guardados =
-    localStorage.getItem(CLAVE_MEDICOS);
-
-  medicos =
-    guardados === null
-      ? iniciales
-      : JSON.parse(guardados);
-
-  renderizarListado();
-
-  nuevoMedico.addEventListener(
-    "click",
-    () => abrirEditor()
-  );
-
-  document
-    .querySelector("#cancelar-editor")
-    .addEventListener(
-      "click",
-      () => editor.close()
-    );
-
-  formulario.addEventListener(
-    "submit",
-    guardarMedico
-  );
-
-  window.addEventListener(
-    "storage",
-    (evento) => {
-      if (evento.key !== CLAVE_MEDICOS) return;
-
-      medicos =
-        evento.newValue === null
-          ? iniciales
-          : JSON.parse(evento.newValue);
-
-      renderizarListado();
-    }
-  );
-}
-
-
-// Inicia médicos si existe una sesión válida
-if (obtenerRol()) {
-  iniciarMedicos().catch((error) => {
-    console.error(error);
-
-    estadoListado.textContent =
-      "No se pudieron cargar los médicos. Verifica el servidor HTTP local y recarga.";
+    fragmento.append(fila);
   });
+  filas.replaceChildren(fragmento);
+  tabla.hidden = registros.length === 0;
+  estado.hidden = registros.length > 0;
+  estado.textContent = registros.length ? "" : `No hay ${CONFIG.plural} registrados.`;
+  if (botonNuevo) botonNuevo.hidden = !puedeEscribir;
+  const modo = $("#modo-consulta");
+  if (modo) modo.hidden = puedeEscribir;
 }
+function verDetalle(registro) {
+  datosDetalle.replaceChildren();
+  CONFIG.detalles.forEach(([label, campo]) => {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = texto(valorRelacionado(registro, campo));
+    datosDetalle.append(dt, dd);
+  });
+  if (registro.aviso) {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = "Aviso del servicio";
+    dd.textContent = registro.aviso;
+    datosDetalle.append(dt, dd);
+  }
+  detalle.showModal();
+}
+function llenarSelect(select, opciones, valor) {
+  select.replaceChildren();
+  opciones.forEach(op => {
+    const option = document.createElement("option");
+    option.value = op.value;
+    option.textContent = op.label;
+    select.append(option);
+  });
+  select.value = valor ?? "";
+}
+async function cargarReferencias() {
+  if (!CONFIG.referencias) return;
+  const [pacientes, medicos] = await Promise.all([
+    api("/pacientes"), api("/medicos")
+  ]);
+  llenarSelect(formulario.elements.paciente_id,
+    [{value:"",label:"Selecciona un paciente"}, ...pacientes.map(x=>({value:x.id,label:`${x.nombre} · ${x.documento}`}))], "");
+  llenarSelect(formulario.elements.medico_id,
+    [{value:"",label:"Selecciona un médico"}, ...medicos.map(x=>({value:x.id,label:`${x.nombre} · ${x.especialidad}`}))], "");
+}
+async function abrirEditor(registro = null) {
+  if (!puedeEscribir) return;
+  idEnEdicion = registro?.id ?? null;
+  formulario.reset();
+  errorEditor.textContent = "";
+  $("#titulo-editor").textContent = registro ? `Editar ${CONFIG.singular}` : `Nuevo ${CONFIG.singular}`;
+  try {
+    await cargarReferencias();
+    CONFIG.campos.forEach(campo => {
+      const control = formulario.elements[campo.name];
+      if (control && registro) control.value = campo.name === "fecha_hora" ? String(registro[campo.name] || "").slice(0,16) : (registro[campo.name] ?? "");
+    });
+    if (registro && CONFIG.referencias) {
+      formulario.elements.paciente_id.value = registro.paciente_id;
+      formulario.elements.medico_id.value = registro.medico_id;
+    }
+    editor.showModal();
+  } catch (error) {
+    aviso.textContent = `No se pudieron cargar las opciones del formulario: ${error.message}`;
+  }
+}
+async function eliminarRegistro(registro) {
+  if (!puedeEscribir || !confirm(`¿Eliminar ${CONFIG.singular} #${registro.id}?`)) return;
+  try {
+    await apiDelete(`${CONFIG.ruta}/${registro.id}`);
+    aviso.textContent = `${CONFIG.singular} eliminado correctamente.`;
+    await cargar();
+  } catch (error) { aviso.textContent = error.message; }
+}
+function obtenerDatosFormulario() {
+  const datos = {};
+  CONFIG.campos.forEach(campo => {
+    let valor = formulario.elements[campo.name].value.trim();
+    if (campo.tipo === "number") valor = Number(valor);
+    datos[campo.name] = valor;
+  });
+  return datos;
+}
+formulario?.addEventListener("submit", async evento => {
+  evento.preventDefault();
+  if (!puedeEscribir) return;
+  errorEditor.textContent = "";
+  const datos = obtenerDatosFormulario();
+  try {
+    if (idEnEdicion === null) await apiPost(CONFIG.ruta, datos);
+    else await apiPut(`${CONFIG.ruta}/${idEnEdicion}`, datos);
+    editor.close();
+    aviso.textContent = `${CONFIG.singular} ${idEnEdicion === null ? "creado" : "actualizado"} correctamente.`;
+    await cargar();
+  } catch (error) { errorEditor.textContent = error.message; }
+});
+$("#cancelar-editor")?.addEventListener("click", () => editor.close());
+botonNuevo?.addEventListener("click", () => abrirEditor());
+async function cargar() {
+  estado.hidden = false;
+  estado.textContent = `Consultando ${CONFIG.plural} en el servidor…`;
+  tabla.hidden = true;
+  try {
+    const respuesta = await api(CONFIG.ruta);
+    registros = Array.isArray(respuesta) ? respuesta : [];
+    renderizar();
+  } catch (error) {
+    registros = [];
+    filas.replaceChildren();
+    estado.hidden = false;
+    estado.textContent = error.message;
+    aviso.textContent = error.message;
+  }
+}
+cargar();

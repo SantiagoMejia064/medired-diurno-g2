@@ -1,53 +1,64 @@
-const CLAVE_ROL = "medired.rol";
-const ROLES = new Map([
-  ["administrador", "Administrador"],
-  ["admisiones", "Admisiones"],
-  ["medico", "Médico"],
-]);
+import { apiPost } from "./api.js";
 
-export function obtenerRol() {
-  const rol = localStorage.getItem(CLAVE_ROL);
-  return ROLES.has(rol) ? rol : null;
+const NOMBRES_ROL = {
+  administrador: "Administrador",
+  admisiones: "Admisiones",
+  medico: "Médico"
+};
+
+export const obtenerUsuario = () => {
+  try { return JSON.parse(sessionStorage.getItem("usuario") || "null"); }
+  catch { return null; }
+};
+export const obtenerRol = () => obtenerUsuario()?.rol ?? null;
+export const nombreRol = (rol = obtenerRol()) => NOMBRES_ROL[rol] || rol || "Sin rol";
+export const tieneSesion = () => Boolean(sessionStorage.getItem("token") && obtenerUsuario());
+
+export function cerrarSesion() {
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("usuario");
+  location.replace("/index.html");
 }
 
-export function puedeGestionarCitas() {
-  return ["administrador", "admisiones"].includes(obtenerRol());
+export function protegerPagina() {
+  if (!tieneSesion()) {
+    location.replace("/index.html");
+    return false;
+  }
+  document.querySelectorAll("[data-rol]").forEach(el => el.textContent = nombreRol());
+  document.querySelectorAll("[data-nombre]").forEach(el => el.textContent = obtenerUsuario()?.nombre || obtenerUsuario()?.email || "Usuario");
+  document.querySelectorAll("[data-salir]").forEach(el => el.addEventListener("click", cerrarSesion));
+  document.body.hidden = false;
+  return true;
 }
 
-const rol = obtenerRol();
-const acceso = document.querySelector("#acceso");
-
-if (acceso) {
-  if (rol) location.replace("inicio.html");
-  acceso.addEventListener("submit", (evento) => {
+const formulario = document.querySelector("#acceso");
+if (formulario) {
+  if (tieneSesion()) location.replace("/inicio.html");
+  formulario.addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    const seleccionado = acceso.elements.rol.value;
-    if (!ROLES.has(seleccionado)) return;
-
-    localStorage.setItem(CLAVE_ROL, seleccionado);
-    location.replace("inicio.html");
+    const aviso = document.querySelector("#error-acceso");
+    const boton = formulario.querySelector('button[type="submit"]');
+    aviso.textContent = "";
+    boton.disabled = true;
+    boton.textContent = "Validando…";
+    try {
+      const email = formulario.elements.email.value.trim();
+      const password = formulario.elements.password.value;
+      const resultado = await apiPost("/usuarios/login", { email, password });
+      if (!resultado?.token || !resultado?.usuario?.rol || !NOMBRES_ROL[resultado.usuario.rol]) {
+        throw new Error("El servidor no devolvió una sesión válida o el rol no está habilitado.");
+      }
+      sessionStorage.setItem("token", resultado.token);
+      sessionStorage.setItem("usuario", JSON.stringify(resultado.usuario));
+      location.replace("/inicio.html");
+    } catch (error) {
+      aviso.textContent = error.message || "No fue posible iniciar sesión.";
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Iniciar sesión";
+    }
   });
-} else if (document.body.hasAttribute("data-privado")) {
-  if (!rol) {
-    location.replace("index.html");
-  } else {
-    document.querySelectorAll("[data-rol]").forEach((elemento) => {
-      elemento.textContent = ROLES.get(rol);
-    });
-    document.querySelector("[data-salir]").addEventListener("click", () => {
-      localStorage.removeItem(CLAVE_ROL);
-      location.replace("index.html");
-    });
-    document.body.hidden = false;
-  }
 }
 
-window.addEventListener("pageshow", (evento) => {
-  if (evento.persisted && obtenerRol() !== rol) location.reload();
-});
-
-window.addEventListener("storage", (evento) => {
-  if ((evento.key === CLAVE_ROL || evento.key === null) && obtenerRol() !== rol) {
-    location.reload();
-  }
-});
+if (document.body.hasAttribute("data-privado")) protegerPagina();

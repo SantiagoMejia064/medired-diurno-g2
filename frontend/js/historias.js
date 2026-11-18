@@ -1,181 +1,187 @@
-import { obtenerRol } from "./sesion.js";
-import {
-  CLAVE_HISTORIAS, cargarDatos, eliminarHistoria, fechaLocalActual,
-  guardarHistoria, leerHistorias, puedeGestionarHistorias,
-} from "./datos-historias.js";
+import { api, apiPost, apiPut, apiDelete } from "./api.js";
+import { obtenerRol, protegerPagina } from "./sesion.js";
 
-const nuevaHistoria = document.querySelector("#nueva-historia");
-const filtroPaciente = document.querySelector("#filtro-paciente");
-const filas = document.querySelector("#filas-historias");
-const tabla = document.querySelector(".tabla-contenedor");
-const estadoListado = document.querySelector("#estado-listado");
-const aviso = document.querySelector("#aviso");
-const editor = document.querySelector("#editor");
-const formulario = document.querySelector("#formulario-historia");
-const tituloEditor = document.querySelector("#titulo-editor");
-const errorEditor = document.querySelector("#error-editor");
-const detalle = document.querySelector("#detalle");
-const datosDetalle = document.querySelector("#datos-detalle");
-const formatoFecha = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeZone: "UTC" });
+const CONFIG = {"ruta": "/historias", "singular": "historia clínica", "plural": "historias clínicas", "filas": "#filas-historias", "formulario": "#formulario-historia", "botonNuevo": "#nueva-historia", "rolesEscritura": ["administrador", "medico"], "referencias": true, "columnas": [{"campo": "fecha"}, {"campo": "paciente"}, {"campo": "medico"}], "detalles": [["Fecha", "fecha"], ["Paciente", "paciente"], ["Médico", "medico"], ["Motivo", "motivo_consulta"], ["Diagnóstico", "diagnostico"], ["Tratamiento", "tratamiento"]], "campos": [{"name": "paciente_id", "tipo": "number"}, {"name": "medico_id", "tipo": "number"}, {"name": "fecha"}, {"name": "motivo_consulta"}, {"name": "diagnostico"}, {"name": "tratamiento"}]};
+const rol = obtenerRol();
+const puedeEscribir = CONFIG.rolesEscritura.includes(rol);
+const $ = (selector) => document.querySelector(selector);
+const filas = $(CONFIG.filas);
+const tabla = $(".tabla-contenedor");
+const estado = $("#estado-listado");
+const aviso = $("#aviso");
+const editor = $("#editor");
+const formulario = $(CONFIG.formulario);
+const errorEditor = $("#error-editor");
+const detalle = $("#detalle");
+const datosDetalle = $("#datos-detalle");
+const botonNuevo = $(CONFIG.botonNuevo);
+let registros = [];
+let idEnEdicion = null;
 
-function formatearFecha(fecha) {
-  return formatoFecha.format(new Date(`${fecha}T00:00:00Z`));
+if (!protegerPagina()) throw new Error("Sesión requerida");
+
+function texto(valor) {
+  if (valor === null || valor === undefined || valor === "") return "No registrado";
+  return String(valor);
 }
-
-function crearAccion(texto, ejecutar, clase = "") {
+function crearAccion(etiqueta, accion, clase = "") {
   const boton = document.createElement("button");
   boton.type = "button";
   boton.className = `accion ${clase}`;
-  boton.textContent = texto;
-  boton.addEventListener("click", ejecutar);
+  boton.textContent = etiqueta;
+  boton.addEventListener("click", accion);
   return boton;
 }
-
-function mostrarDetalle(historia) {
-  const campos = [
-    ["Fecha", formatearFecha(historia.fecha)],
-    ["Paciente", historia.paciente?.nombre ?? "Paciente no disponible"],
-    ["Médico", historia.medico?.nombre ?? "Médico no disponible"],
-    ["Especialidad", historia.medico?.especialidad ?? "—"],
-    ["Motivo de consulta", historia.motivo_consulta],
-    ["Diagnóstico", historia.diagnostico],
-    ["Tratamiento", historia.tratamiento],
-  ];
-
+function celda(fila, valor) {
+  const td = fila.insertCell();
+  td.textContent = texto(valor);
+  return td;
+}
+function valorRelacionado(registro, campo) {
+  if (campo === "paciente") return registro.paciente?.nombre || `ID ${registro.paciente_id}`;
+  if (campo === "medico") return registro.medico?.nombre || `ID ${registro.medico_id}`;
+  if (campo.includes(".")) return campo.split(".").reduce((obj, key) => obj?.[key], registro);
+  return registro[campo];
+}
+function renderizar() {
+  const fragmento = document.createDocumentFragment();
+  registros.forEach(registro => {
+    const fila = document.createElement("tr");
+    CONFIG.columnas.forEach(col => {
+      const td = celda(fila, valorRelacionado(registro, col.campo));
+      if (col.campo === "estado") {
+        const etiqueta = document.createElement("span");
+        etiqueta.className = `estado ${registro.estado || ""}`;
+        etiqueta.textContent = texto(registro.estado);
+        td.textContent = "";
+        td.append(etiqueta);
+      }
+    });
+    const acciones = document.createElement("div");
+    acciones.className = "acciones";
+    acciones.append(crearAccion("Ver", () => verDetalle(registro)));
+    if (puedeEscribir) {
+      acciones.append(
+        crearAccion("Editar", () => abrirEditor(registro)),
+        crearAccion("Eliminar", () => eliminarRegistro(registro), "peligro")
+      );
+    }
+    fila.insertCell().append(acciones);
+    fragmento.append(fila);
+  });
+  filas.replaceChildren(fragmento);
+  tabla.hidden = registros.length === 0;
+  estado.hidden = registros.length > 0;
+  estado.textContent = registros.length ? "" : `No hay ${CONFIG.plural} registrados.`;
+  if (botonNuevo) botonNuevo.hidden = !puedeEscribir;
+  const modo = $("#modo-consulta");
+  if (modo) modo.hidden = puedeEscribir;
+}
+function verDetalle(registro) {
   datosDetalle.replaceChildren();
-  for (const [etiqueta, valor] of campos) {
-    const termino = document.createElement("dt");
-    const descripcion = document.createElement("dd");
-    termino.textContent = etiqueta;
-    descripcion.textContent = valor;
-    datosDetalle.append(termino, descripcion);
+  CONFIG.detalles.forEach(([label, campo]) => {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = texto(valorRelacionado(registro, campo));
+    datosDetalle.append(dt, dd);
+  });
+  if (registro.aviso) {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = "Aviso del servicio";
+    dd.textContent = registro.aviso;
+    datosDetalle.append(dt, dd);
   }
   detalle.showModal();
 }
-
-async function iniciarHistorias() {
-  const datos = await cargarDatos();
-  let idEnEdicion = null;
-
-  for (const { id, nombre } of datos.pacientes) {
-    filtroPaciente.add(new Option(nombre, id));
-    formulario.elements.paciente_id.add(new Option(nombre, id));
-  }
-  for (const { id, nombre, especialidad } of datos.medicos) {
-    formulario.elements.medico_id.add(new Option(`${nombre} · ${especialidad}`, id));
-  }
-  filtroPaciente.disabled = false;
-
-  function abrirEditor(historia) {
-    if (!puedeGestionarHistorias()) return;
-    idEnEdicion = historia?.id ?? null;
-    formulario.reset();
-    formulario.elements.fecha.max = fechaLocalActual();
-    errorEditor.textContent = "";
-    tituloEditor.textContent = historia ? "Editar historia" : "Nueva historia";
-    if (historia) {
-      for (const campo of formulario.elements) {
-        if (campo.name) campo.value = historia[campo.name];
-      }
-    } else if (filtroPaciente.value) {
-      formulario.elements.paciente_id.value = filtroPaciente.value;
+function llenarSelect(select, opciones, valor) {
+  select.replaceChildren();
+  opciones.forEach(op => {
+    const option = document.createElement("option");
+    option.value = op.value;
+    option.textContent = op.label;
+    select.append(option);
+  });
+  select.value = valor ?? "";
+}
+async function cargarReferencias() {
+  if (!CONFIG.referencias) return;
+  const [pacientes, medicos] = await Promise.all([
+    api("/pacientes"), api("/medicos")
+  ]);
+  llenarSelect(formulario.elements.paciente_id,
+    [{value:"",label:"Selecciona un paciente"}, ...pacientes.map(x=>({value:x.id,label:`${x.nombre} · ${x.documento}`}))], "");
+  llenarSelect(formulario.elements.medico_id,
+    [{value:"",label:"Selecciona un médico"}, ...medicos.map(x=>({value:x.id,label:`${x.nombre} · ${x.especialidad}`}))], "");
+}
+async function abrirEditor(registro = null) {
+  if (!puedeEscribir) return;
+  idEnEdicion = registro?.id ?? null;
+  formulario.reset();
+  errorEditor.textContent = "";
+  $("#titulo-editor").textContent = registro ? `Editar ${CONFIG.singular}` : `Nuevo ${CONFIG.singular}`;
+  try {
+    await cargarReferencias();
+    CONFIG.campos.forEach(campo => {
+      const control = formulario.elements[campo.name];
+      if (control && registro) control.value = campo.name === "fecha_hora" ? String(registro[campo.name] || "").slice(0,16) : (registro[campo.name] ?? "");
+    });
+    if (registro && CONFIG.referencias) {
+      formulario.elements.paciente_id.value = registro.paciente_id;
+      formulario.elements.medico_id.value = registro.medico_id;
     }
     editor.showModal();
+  } catch (error) {
+    aviso.textContent = `No se pudieron cargar las opciones del formulario: ${error.message}`;
   }
-
-  async function confirmarEliminacion(historia) {
-    if (!puedeGestionarHistorias()) return;
-    if (!window.confirm(`¿Eliminar la atención del ${formatearFecha(historia.fecha)}?`)) return;
-
-    try {
-      await eliminarHistoria(datos, historia.id);
-      renderizarListado();
-      nuevaHistoria.focus();
-      aviso.textContent = "Historia eliminada.";
-    } catch (error) {
-      aviso.textContent = error.message;
-    }
-  }
-
-  function renderizarListado() {
-    const pacienteId = filtroPaciente.value ? Number(filtroPaciente.value) : null;
-    const historias = [...leerHistorias(datos, pacienteId)].sort((a, b) =>
-      b.fecha.localeCompare(a.fecha) || b.id - a.id);
-    const puedeEditar = puedeGestionarHistorias();
-    const contenido = document.createDocumentFragment();
-
-    for (const historia of historias) {
-      const fila = document.createElement("tr");
-      fila.insertCell().textContent = formatearFecha(historia.fecha);
-      fila.insertCell().textContent = historia.paciente?.nombre ?? "Paciente no disponible";
-      fila.insertCell().textContent = historia.medico?.nombre ?? "Médico no disponible";
-
-      const acciones = document.createElement("div");
-      acciones.className = "acciones";
-      acciones.append(crearAccion("Ver detalle", () => mostrarDetalle(historia)));
-      if (puedeEditar) {
-        acciones.append(
-          crearAccion("Editar", () => abrirEditor(historia)),
-          crearAccion("Eliminar", () => confirmarEliminacion(historia), "peligro"),
-        );
-      }
-      fila.insertCell().append(acciones);
-      contenido.append(fila);
-    }
-
-    filas.replaceChildren(contenido);
-    tabla.hidden = historias.length === 0;
-    estadoListado.hidden = historias.length > 0;
-    estadoListado.textContent = pacienteId === null ? "No hay historias registradas." : "Este paciente aún no tiene historias registradas.";
-    nuevaHistoria.hidden = !puedeEditar;
-    document.querySelector("#modo-consulta").hidden = puedeEditar;
-  }
-
-  renderizarListado();
-  filtroPaciente.addEventListener("change", renderizarListado);
-  nuevaHistoria.addEventListener("click", () => abrirEditor());
-  document.querySelector("#cancelar-editor").addEventListener("click", () => editor.close());
-  formulario.addEventListener("submit", async (evento) => {
-    evento.preventDefault();
-    const campos = new FormData(formulario);
-    const historia = {
-      paciente_id: Number(campos.get("paciente_id")),
-      medico_id: Number(campos.get("medico_id")),
-      fecha: campos.get("fecha"),
-      motivo_consulta: campos.get("motivo_consulta"),
-      diagnostico: campos.get("diagnostico"),
-      tratamiento: campos.get("tratamiento"),
-    };
-
-    const submit = evento.submitter;
-    if (submit) submit.disabled = true;
-    errorEditor.textContent = "";
-    try {
-      await guardarHistoria(datos, historia, idEnEdicion);
-      if (filtroPaciente.value && Number(filtroPaciente.value) !== historia.paciente_id) {
-        filtroPaciente.value = "";
-      }
-      editor.close();
-      renderizarListado();
-      nuevaHistoria.focus();
-      aviso.textContent = idEnEdicion === null ? "Historia creada." : "Historia actualizada.";
-    } catch (error) {
-      errorEditor.textContent = error.message;
-    } finally {
-      if (submit) submit.disabled = false;
-    }
-  });
-
-  window.addEventListener("storage", (evento) => {
-    if (evento.key === CLAVE_HISTORIAS || evento.key === null) renderizarListado();
-  });
-  window.addEventListener("pageshow", (evento) => {
-    if (evento.persisted && obtenerRol()) renderizarListado();
-  });
 }
-
-if (obtenerRol()) {
-  iniciarHistorias().catch(() => {
-    estadoListado.textContent = "No se pudieron cargar las historias. Verifica el servidor local y recarga la página.";
-  });
+async function eliminarRegistro(registro) {
+  if (!puedeEscribir || !confirm(`¿Eliminar ${CONFIG.singular} #${registro.id}?`)) return;
+  try {
+    await apiDelete(`${CONFIG.ruta}/${registro.id}`);
+    aviso.textContent = `${CONFIG.singular} eliminado correctamente.`;
+    await cargar();
+  } catch (error) { aviso.textContent = error.message; }
 }
+function obtenerDatosFormulario() {
+  const datos = {};
+  CONFIG.campos.forEach(campo => {
+    let valor = formulario.elements[campo.name].value.trim();
+    if (campo.tipo === "number") valor = Number(valor);
+    datos[campo.name] = valor;
+  });
+  return datos;
+}
+formulario?.addEventListener("submit", async evento => {
+  evento.preventDefault();
+  if (!puedeEscribir) return;
+  errorEditor.textContent = "";
+  const datos = obtenerDatosFormulario();
+  try {
+    if (idEnEdicion === null) await apiPost(CONFIG.ruta, datos);
+    else await apiPut(`${CONFIG.ruta}/${idEnEdicion}`, datos);
+    editor.close();
+    aviso.textContent = `${CONFIG.singular} ${idEnEdicion === null ? "creado" : "actualizado"} correctamente.`;
+    await cargar();
+  } catch (error) { errorEditor.textContent = error.message; }
+});
+$("#cancelar-editor")?.addEventListener("click", () => editor.close());
+botonNuevo?.addEventListener("click", () => abrirEditor());
+async function cargar() {
+  estado.hidden = false;
+  estado.textContent = `Consultando ${CONFIG.plural} en el servidor…`;
+  tabla.hidden = true;
+  try {
+    const respuesta = await api(CONFIG.ruta);
+    registros = Array.isArray(respuesta) ? respuesta : [];
+    renderizar();
+  } catch (error) {
+    registros = [];
+    filas.replaceChildren();
+    estado.hidden = false;
+    estado.textContent = error.message;
+    aviso.textContent = error.message;
+  }
+}
+cargar();

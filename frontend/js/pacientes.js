@@ -1,349 +1,187 @@
+import { api, apiPost, apiPut, apiDelete } from "./api.js";
+import { obtenerRol, protegerPagina } from "./sesion.js";
 
-import { obtenerRol } from "./sesion.js";
-
-const filas = document.querySelector("#filas-pacientes");
-const tabla = document.querySelector(".tabla-contenedor");
-const estadoListado = document.querySelector("#estado-listado");
-const detalle = document.querySelector("#detalle");
-const datosDetalle = document.querySelector("#datos-detalle");
-const nuevoPaciente = document.querySelector("#nuevo-paciente");
-
-const editor = document.querySelector("#editor");
-const formulario = document.querySelector("#formulario-paciente");
-const errorEditor = document.querySelector("#error-editor");
-const aviso = document.querySelector("#aviso");
-
-const CLAVE_PACIENTES = "medired.pacientes";
-
-const puedeGestionar = obtenerRol() === "administrador";
-
-let pacientes = [];
+const CONFIG = {"ruta": "/pacientes", "singular": "paciente", "plural": "pacientes", "filas": "#filas-pacientes", "formulario": "#formulario-paciente", "botonNuevo": "#nuevo-paciente", "rolesEscritura": ["administrador"], "columnas": [{"campo": "nombre"}, {"campo": "documento"}, {"campo": "fecha_nacimiento"}, {"campo": "eps"}, {"campo": "telefono"}], "detalles": [["Nombre", "nombre"], ["Documento", "documento"], ["Fecha de nacimiento", "fecha_nacimiento"], ["EPS", "eps"], ["Teléfono", "telefono"]], "campos": [{"name": "nombre"}, {"name": "documento"}, {"name": "fecha_nacimiento"}, {"name": "eps"}, {"name": "telefono"}]};
+const rol = obtenerRol();
+const puedeEscribir = CONFIG.rolesEscritura.includes(rol);
+const $ = (selector) => document.querySelector(selector);
+const filas = $(CONFIG.filas);
+const tabla = $(".tabla-contenedor");
+const estado = $("#estado-listado");
+const aviso = $("#aviso");
+const editor = $("#editor");
+const formulario = $(CONFIG.formulario);
+const errorEditor = $("#error-editor");
+const detalle = $("#detalle");
+const datosDetalle = $("#datos-detalle");
+const botonNuevo = $(CONFIG.botonNuevo);
+let registros = [];
 let idEnEdicion = null;
 
+if (!protegerPagina()) throw new Error("Sesión requerida");
 
-// Crea una celda de la tabla
-function agregarCelda(fila, texto) {
-  const celda = fila.insertCell();
-  celda.textContent = texto ?? "";
-  return celda;
+function texto(valor) {
+  if (valor === null || valor === undefined || valor === "") return "No registrado";
+  return String(valor);
 }
-
-
-// Crea un botón de acción
-function crearAccion(texto, ejecutar, clase = "") {
+function crearAccion(etiqueta, accion, clase = "") {
   const boton = document.createElement("button");
-
   boton.type = "button";
   boton.className = `accion ${clase}`;
-  boton.textContent = texto;
-  boton.addEventListener("click", ejecutar);
-
+  boton.textContent = etiqueta;
+  boton.addEventListener("click", accion);
   return boton;
 }
-
-
-// Muestra los detalles de un paciente
-function mostrarDetalle(paciente) {
-  const campos = [
-    ["Nombre", paciente.nombre],
-    ["Documento", paciente.documento],
-    ["Fecha de nacimiento", paciente.fecha_nacimiento],
-    ["EPS", paciente.eps],
-    ["Teléfono", paciente.telefono],
-  ];
-
-  datosDetalle.replaceChildren();
-
-  for (const [etiqueta, valor] of campos) {
-    const termino = document.createElement("dt");
-    const descripcion = document.createElement("dd");
-
-    termino.textContent = etiqueta;
-    descripcion.textContent = valor || "No registrado";
-
-    datosDetalle.append(termino, descripcion);
-  }
-
-  detalle.showModal();
+function celda(fila, valor) {
+  const td = fila.insertCell();
+  td.textContent = texto(valor);
+  return td;
 }
-
-
-// Guarda los pacientes modificados en localStorage
-function guardarDatos() {
-  localStorage.setItem(
-    CLAVE_PACIENTES,
-    JSON.stringify(pacientes)
-  );
+function valorRelacionado(registro, campo) {
+  if (campo === "paciente") return registro.paciente?.nombre || `ID ${registro.paciente_id}`;
+  if (campo === "medico") return registro.medico?.nombre || `ID ${registro.medico_id}`;
+  if (campo.includes(".")) return campo.split(".").reduce((obj, key) => obj?.[key], registro);
+  return registro[campo];
 }
-
-
-// Abre el formulario para crear o editar
-function abrirEditor(paciente = null) {
-  if (!puedeGestionar) return;
-
-  idEnEdicion = paciente?.id ?? null;
-
-  formulario.reset();
-  errorEditor.textContent = "";
-
-  document.querySelector("#titulo-editor").textContent =
-    paciente ? "Editar paciente" : "Nuevo paciente";
-
-  if (paciente) {
-    for (const campo of [
-      "nombre",
-      "documento",
-      "fecha_nacimiento",
-      "eps",
-      "telefono",
-    ]) {
-      formulario.elements[campo].value = paciente[campo] ?? "";
-    }
-  }
-
-  editor.showModal();
-}
-
-
-// Elimina un paciente
-function eliminarPaciente(paciente) {
-  if (!puedeGestionar) return;
-
-  const confirmar = window.confirm(
-    `¿Eliminar al paciente ${paciente.nombre}?`
-  );
-
-  if (!confirmar) return;
-
-  pacientes = pacientes.filter(
-    (registro) => registro.id !== paciente.id
-  );
-
-  guardarDatos();
-  renderizarListado();
-
-  aviso.textContent = "Paciente eliminado.";
-}
-
-
-// Valida los datos del paciente
-function validarPaciente(paciente) {
-  if (
-    !paciente.nombre ||
-    !paciente.documento ||
-    !paciente.fecha_nacimiento ||
-    !paciente.eps ||
-    !paciente.telefono
-  ) {
-    return "Todos los campos son obligatorios.";
-  }
-
-  if (!/^\d{6,15}$/.test(paciente.documento)) {
-    return "El documento debe contener entre 6 y 15 números.";
-  }
-
-  if (!/^\d{10}$/.test(paciente.telefono)) {
-    return "El teléfono debe contener exactamente 10 números.";
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(paciente.fecha_nacimiento)) {
-    return "La fecha de nacimiento no es válida.";
-  }
-
-  const fecha = new Date(
-    `${paciente.fecha_nacimiento}T00:00:00`
-  );
-
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-
-  if (
-    Number.isNaN(fecha.getTime()) ||
-    fecha.toISOString().slice(0, 10) !== paciente.fecha_nacimiento
-  ) {
-    return "La fecha de nacimiento no es válida.";
-  }
-
-  if (fecha > hoy) {
-    return "La fecha de nacimiento no puede ser futura.";
-  }
-
-  return null;
-}
-
-
-// Guarda o actualiza un paciente
-function guardarPaciente(evento) {
-  evento.preventDefault();
-
-  if (!puedeGestionar) return;
-
-  const datos = new FormData(formulario);
-
-  const paciente = {
-    nombre: String(datos.get("nombre")).trim(),
-    documento: String(datos.get("documento")).trim(),
-    fecha_nacimiento: String(datos.get("fecha_nacimiento")).trim(),
-    eps: String(datos.get("eps")).trim(),
-    telefono: String(datos.get("telefono")).trim(),
-  };
-
-  const error = validarPaciente(paciente);
-
-  if (error) {
-    errorEditor.textContent = error;
-    return;
-  }
-
-  const duplicado = pacientes.some(
-    (registro) =>
-      registro.documento.toLowerCase() ===
-        paciente.documento.toLowerCase() &&
-      registro.id !== idEnEdicion
-  );
-
-  if (duplicado) {
-    errorEditor.textContent = "El documento ya está registrado.";
-    return;
-  }
-
-  if (idEnEdicion === null) {
-    const nuevoId =
-      Math.max(
-        0,
-        ...pacientes.map((registro) => registro.id)
-      ) + 1;
-
-    pacientes.push({
-      id: nuevoId,
-      ...paciente,
-    });
-
-    aviso.textContent = "Paciente creado.";
-  } else {
-    pacientes = pacientes.map((registro) =>
-      registro.id === idEnEdicion
-        ? {
-            id: registro.id,
-            ...paciente,
-          }
-        : registro
-    );
-
-    aviso.textContent = "Paciente actualizado.";
-  }
-
-  guardarDatos();
-  renderizarListado();
-
-  editor.close();
-}
-
-
-// Muestra los pacientes en la tabla
-function renderizarListado() {
-  const contenido = document.createDocumentFragment();
-
-  for (const paciente of pacientes) {
+function renderizar() {
+  const fragmento = document.createDocumentFragment();
+  registros.forEach(registro => {
     const fila = document.createElement("tr");
-
-    agregarCelda(fila, paciente.nombre);
-    agregarCelda(fila, paciente.documento);
-    agregarCelda(fila, paciente.fecha_nacimiento);
-    agregarCelda(fila, paciente.eps);
-    agregarCelda(fila, paciente.telefono);
-
+    CONFIG.columnas.forEach(col => {
+      const td = celda(fila, valorRelacionado(registro, col.campo));
+      if (col.campo === "estado") {
+        const etiqueta = document.createElement("span");
+        etiqueta.className = `estado ${registro.estado || ""}`;
+        etiqueta.textContent = texto(registro.estado);
+        td.textContent = "";
+        td.append(etiqueta);
+      }
+    });
     const acciones = document.createElement("div");
     acciones.className = "acciones";
-
-    acciones.append(
-      crearAccion(
-        "Ver detalle",
-        () => mostrarDetalle(paciente)
-      )
-    );
-
-    if (puedeGestionar) {
+    acciones.append(crearAccion("Ver", () => verDetalle(registro)));
+    if (puedeEscribir) {
       acciones.append(
-        crearAccion(
-          "Editar",
-          () => abrirEditor(paciente)
-        ),
-        crearAccion(
-          "Eliminar",
-          () => eliminarPaciente(paciente),
-          "peligro"
-        )
+        crearAccion("Editar", () => abrirEditor(registro)),
+        crearAccion("Eliminar", () => eliminarRegistro(registro), "peligro")
       );
     }
-
     fila.insertCell().append(acciones);
-    contenido.append(fila);
-  }
-
-  filas.replaceChildren(contenido);
-
-  tabla.hidden = pacientes.length === 0;
-
-  estadoListado.hidden = pacientes.length > 0;
-  estadoListado.textContent = "No hay pacientes registrados.";
-
-  nuevoPaciente.hidden = !puedeGestionar;
-
-  document.querySelector("#modo-consulta").hidden =
-    puedeGestionar;
-}
-
-
-// Carga los datos iniciales
-async function iniciarPacientes() {
-  const respuesta = await fetch("data/pacientes.json");
-
-  if (!respuesta.ok) {
-    throw new Error("No se pudo cargar pacientes.json");
-  }
-
-  const iniciales = await respuesta.json();
-
-  const guardados = localStorage.getItem(CLAVE_PACIENTES);
-
-  pacientes =
-    guardados === null
-      ? iniciales
-      : JSON.parse(guardados);
-
-  renderizarListado();
-
-  nuevoPaciente.addEventListener(
-    "click",
-    () => abrirEditor()
-  );
-
-  document
-    .querySelector("#cancelar-editor")
-    .addEventListener("click", () => editor.close());
-
-  formulario.addEventListener("submit", guardarPaciente);
-
-  window.addEventListener("storage", (evento) => {
-    if (evento.key !== CLAVE_PACIENTES) return;
-
-    pacientes =
-      evento.newValue === null
-        ? iniciales
-        : JSON.parse(evento.newValue);
-
-    renderizarListado();
+    fragmento.append(fila);
   });
+  filas.replaceChildren(fragmento);
+  tabla.hidden = registros.length === 0;
+  estado.hidden = registros.length > 0;
+  estado.textContent = registros.length ? "" : `No hay ${CONFIG.plural} registrados.`;
+  if (botonNuevo) botonNuevo.hidden = !puedeEscribir;
+  const modo = $("#modo-consulta");
+  if (modo) modo.hidden = puedeEscribir;
 }
-
-
-// Inicia pacientes si existe una sesión válida
-if (obtenerRol()) {
-  iniciarPacientes().catch((error) => {
-    console.error(error);
-
-    estadoListado.textContent =
-      "No se pudieron cargar los pacientes. Verifica el servidor HTTP local y recarga.";
+function verDetalle(registro) {
+  datosDetalle.replaceChildren();
+  CONFIG.detalles.forEach(([label, campo]) => {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = texto(valorRelacionado(registro, campo));
+    datosDetalle.append(dt, dd);
   });
+  if (registro.aviso) {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = "Aviso del servicio";
+    dd.textContent = registro.aviso;
+    datosDetalle.append(dt, dd);
+  }
+  detalle.showModal();
 }
+function llenarSelect(select, opciones, valor) {
+  select.replaceChildren();
+  opciones.forEach(op => {
+    const option = document.createElement("option");
+    option.value = op.value;
+    option.textContent = op.label;
+    select.append(option);
+  });
+  select.value = valor ?? "";
+}
+async function cargarReferencias() {
+  if (!CONFIG.referencias) return;
+  const [pacientes, medicos] = await Promise.all([
+    api("/pacientes"), api("/medicos")
+  ]);
+  llenarSelect(formulario.elements.paciente_id,
+    [{value:"",label:"Selecciona un paciente"}, ...pacientes.map(x=>({value:x.id,label:`${x.nombre} · ${x.documento}`}))], "");
+  llenarSelect(formulario.elements.medico_id,
+    [{value:"",label:"Selecciona un médico"}, ...medicos.map(x=>({value:x.id,label:`${x.nombre} · ${x.especialidad}`}))], "");
+}
+async function abrirEditor(registro = null) {
+  if (!puedeEscribir) return;
+  idEnEdicion = registro?.id ?? null;
+  formulario.reset();
+  errorEditor.textContent = "";
+  $("#titulo-editor").textContent = registro ? `Editar ${CONFIG.singular}` : `Nuevo ${CONFIG.singular}`;
+  try {
+    await cargarReferencias();
+    CONFIG.campos.forEach(campo => {
+      const control = formulario.elements[campo.name];
+      if (control && registro) control.value = campo.name === "fecha_hora" ? String(registro[campo.name] || "").slice(0,16) : (registro[campo.name] ?? "");
+    });
+    if (registro && CONFIG.referencias) {
+      formulario.elements.paciente_id.value = registro.paciente_id;
+      formulario.elements.medico_id.value = registro.medico_id;
+    }
+    editor.showModal();
+  } catch (error) {
+    aviso.textContent = `No se pudieron cargar las opciones del formulario: ${error.message}`;
+  }
+}
+async function eliminarRegistro(registro) {
+  if (!puedeEscribir || !confirm(`¿Eliminar ${CONFIG.singular} #${registro.id}?`)) return;
+  try {
+    await apiDelete(`${CONFIG.ruta}/${registro.id}`);
+    aviso.textContent = `${CONFIG.singular} eliminado correctamente.`;
+    await cargar();
+  } catch (error) { aviso.textContent = error.message; }
+}
+function obtenerDatosFormulario() {
+  const datos = {};
+  CONFIG.campos.forEach(campo => {
+    let valor = formulario.elements[campo.name].value.trim();
+    if (campo.tipo === "number") valor = Number(valor);
+    datos[campo.name] = valor;
+  });
+  return datos;
+}
+formulario?.addEventListener("submit", async evento => {
+  evento.preventDefault();
+  if (!puedeEscribir) return;
+  errorEditor.textContent = "";
+  const datos = obtenerDatosFormulario();
+  try {
+    if (idEnEdicion === null) await apiPost(CONFIG.ruta, datos);
+    else await apiPut(`${CONFIG.ruta}/${idEnEdicion}`, datos);
+    editor.close();
+    aviso.textContent = `${CONFIG.singular} ${idEnEdicion === null ? "creado" : "actualizado"} correctamente.`;
+    await cargar();
+  } catch (error) { errorEditor.textContent = error.message; }
+});
+$("#cancelar-editor")?.addEventListener("click", () => editor.close());
+botonNuevo?.addEventListener("click", () => abrirEditor());
+async function cargar() {
+  estado.hidden = false;
+  estado.textContent = `Consultando ${CONFIG.plural} en el servidor…`;
+  tabla.hidden = true;
+  try {
+    const respuesta = await api(CONFIG.ruta);
+    registros = Array.isArray(respuesta) ? respuesta : [];
+    renderizar();
+  } catch (error) {
+    registros = [];
+    filas.replaceChildren();
+    estado.hidden = false;
+    estado.textContent = error.message;
+    aviso.textContent = error.message;
+  }
+}
+cargar();

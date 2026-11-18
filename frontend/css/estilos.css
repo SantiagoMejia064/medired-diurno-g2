@@ -186,3 +186,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
   dl { grid-template-columns: 1fr; gap: .15rem; }
   dd { margin-bottom: .45rem; }
 }
+
+#error-acceso { min-height: 1.4rem; margin-top: .75rem; }
+button:disabled { opacity: .6; cursor: wait; }
+.aviso { color: #842F25; }
