@@ -1,6 +1,7 @@
 # MediRed IPS — Frontend conectado a API
 
 ## Qué contiene
+
 - Inicio de sesión real contra `POST /api/usuarios/login`.
 - JWT y usuario guardados únicamente en `sessionStorage`.
 - Cliente HTTP compartido en `js/api.js`, con `Authorization: Bearer ...`.
@@ -9,17 +10,20 @@
 - La UI oculta acciones de escritura según el rol; el backend conserva la autorización definitiva.
 
 ## Roles implementados según las rutas del backend
-| Recurso | Administrador | Admisiones | Médico |
-|---|---|---|---|
-| Ver pacientes y médicos | Sí | Sí | Sí |
-| Crear/editar/eliminar pacientes y médicos | Sí | No | No |
-| Ver citas | Sí | Sí | Sí |
-| Crear/editar/eliminar citas | Sí | Sí | No |
-| Ver historias | Sí | Sí | Sí |
-| Crear/editar/eliminar historias | Sí | No | Sí |
+
+| Recurso                                   | Administrador | Admisiones | Médico |
+| ----------------------------------------- | ------------- | ---------- | ------ |
+| Ver pacientes y médicos                   | Sí            | Sí         | Sí     |
+| Crear/editar/eliminar pacientes y médicos | Sí            | No         | No     |
+| Ver citas                                 | Sí            | Sí         | Sí     |
+| Crear/editar/eliminar citas               | Sí            | Sí         | No     |
+| Ver historias                             | Sí            | Sí         | Sí     |
+| Crear/editar/eliminar historias           | Sí            | No         | Sí     |
 
 ## API esperada
+
 El frontend usa rutas relativas `/api`, para que navegador y frontend compartan origen:
+
 - `/api/usuarios/login`
 - `/api/pacientes`
 - `/api/medicos`
@@ -29,6 +33,7 @@ El frontend usa rutas relativas `/api`, para que navegador y frontend compartan 
 Las respuestas de citas e historias usan los objetos relacionados `paciente` y `medico` que compone el microservicio. El navegador no hace peticiones adicionales por fila para reconstruir esas relaciones.
 
 ## Apache en servidor2
+
 Mantén los microservicios escuchando en `127.0.0.1` (no se cambia `HOST`). En el VirtualHost de `app.medired.com`, habilita proxy y agrega:
 
 ```apache
@@ -51,6 +56,7 @@ ProxyPassReverse /api/historias http://127.0.0.1:3005/historias
 ```
 
 Habilitar módulos (si aún no están habilitados):
+
 ```bash
 sudo a2enmod proxy proxy_http
 sudo apache2ctl configtest
@@ -60,7 +66,9 @@ sudo systemctl reload apache2
 El `DocumentRoot` del VirtualHost debe apuntar a `/var/www/app` y servir el contenido de esta carpeta (no la carpeta contenedora).
 
 ## Publicación después de integrar en GitHub
+
 En servidor2, desde la carpeta del repositorio:
+
 ```bash
 git status --short
 git pull --ff-only origin main
@@ -71,6 +79,7 @@ sudo systemctl reload apache2
 ```
 
 ## Comprobación
+
 1. Abrir `http://app.medired.com`.
 2. Iniciar sesión con las cuentas creadas en `ms-usuarios` (no hay selector de rol).
 3. Revisar en DevTools > Network que las llamadas sean a `/api/...` y lleven Authorization en operaciones protegidas.
@@ -87,16 +96,16 @@ El cliente `js/api.js` centraliza mensajes para errores HTTP `400`, `401`, `403`
 
 ### Matriz de permisos verificada en las rutas del backend
 
-| Módulo | Administrador | Admisiones | Médico |
-|---|---|---|---|
-| Pacientes: consultar | Sí | Sí | Sí |
-| Pacientes: crear, editar, eliminar | Sí | No | No |
-| Médicos: consultar | Sí | Sí | Sí |
-| Médicos: crear, editar, eliminar | Sí | No | No |
-| Citas: consultar | Sí | Sí | Sí |
-| Citas: crear, editar, eliminar | Sí | Sí | No |
-| Historias clínicas: consultar | Sí | Sí | Sí |
-| Historias clínicas: crear, editar, eliminar | Sí | No | Sí |
+| Módulo                                      | Administrador | Admisiones | Médico |
+| ------------------------------------------- | ------------- | ---------- | ------ |
+| Pacientes: consultar                        | Sí            | Sí         | Sí     |
+| Pacientes: crear, editar, eliminar          | Sí            | No         | No     |
+| Médicos: consultar                          | Sí            | Sí         | Sí     |
+| Médicos: crear, editar, eliminar            | Sí            | No         | No     |
+| Citas: consultar                            | Sí            | Sí         | Sí     |
+| Citas: crear, editar, eliminar              | Sí            | Sí         | No     |
+| Historias clínicas: consultar               | Sí            | Sí         | Sí     |
+| Historias clínicas: crear, editar, eliminar | Sí            | No         | Sí     |
 
 Los botones de crear, editar y eliminar se muestran únicamente a los roles autorizados. El backend sigue siendo la autoridad: si se intenta una operación no permitida directamente, debe responder `403` y la interfaz muestra ese mensaje. Ocultar botones por sí solo no es seguridad.
 

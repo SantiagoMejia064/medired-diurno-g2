@@ -1,0 +1,2188 @@
+{
+  "info": {
+    "name": "MediRed IPS · ms-citas · pruebas reproducibles",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Taller 2, Módulo 3 · Santiago Mejía Suárez. Importar junto con README-POSTMAN.md. Ejecutar 00, 01 y 02 en orden sobre una base de pruebas. Las escrituras requieren permitirEscritura=true. Las carpetas 90–92 son manuales y se omiten por defecto. No contiene credenciales. Las colecciones anteriores se conservan como antecedentes."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{tokenAdmin}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3004",
+      "type": "string"
+    },
+    {
+      "key": "loginUrl",
+      "value": "http://localhost:3001/usuarios/login",
+      "type": "string"
+    },
+    {
+      "key": "pacientesUrl",
+      "value": "http://localhost:3002",
+      "type": "string"
+    },
+    {
+      "key": "medicosUrl",
+      "value": "http://localhost:3003",
+      "type": "string"
+    },
+    {
+      "key": "healthUrl",
+      "value": "http://localhost:3004/health",
+      "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "medicoEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "medicoPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenAdmin",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenMedico",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaAuxId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaReferenciasId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaManualId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pacienteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "medicoId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaInexistenteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pacienteInexistenteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fechaPrueba",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fechaAuxiliar",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "permitirEscritura",
+      "value": "false",
+      "type": "string"
+    },
+    {
+      "key": "modoFalloPacientes",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "modoLimpieza",
+      "value": "false",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const generadas = [\"tokenAdmin\", \"tokenMedico\", \"citaId\", \"citaAuxId\", \"citaReferenciasId\", \"citaManualId\",",
+          "  \"pacienteId\", \"medicoId\", \"citaInexistenteId\", \"pacienteInexistenteId\", \"fechaPrueba\", \"fechaAuxiliar\"];",
+          "// Las variables producidas por los scripts tienen una sola fuente de verdad.",
+          "generadas.forEach(clave => pm.variables.set(clave, pm.collectionVariables.get(clave) || \"\"));",
+          "if ([\"POST\", \"PUT\", \"DELETE\"].includes(pm.request.method) &&",
+          "    pm.request.url.toString() !== \"{{loginUrl}}\" &&",
+          "    pm.variables.replaceIn(pm.request.url.toString()) !== pm.variables.get(\"loginUrl\") &&",
+          "    String(pm.variables.get(\"permitirEscritura\")) !== \"true\") {",
+          "  console.warn(\"Escritura omitida. Utiliza una base de pruebas y activa permitirEscritura=true.\");",
+          "  pm.execution.skipRequest();",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Autenticación",
+      "description": "Introducir credenciales locales de cuentas activas de prueba. Una autenticación fallida detiene el Runner.",
+      "item": [
+        {
+          "name": "Login administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{loginUrl}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":{{emailJSON}},\"password\":{{passwordJSON}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset(\"tokenAdmin\");",
+                  "pm.variables.set(\"tokenAdmin\", \"\");",
+                  "const email = pm.variables.get(\"adminEmail\");",
+                  "const password = pm.variables.get(\"adminPassword\");",
+                  "if (!email || !password) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Configura adminEmail y adminPassword como valores locales del entorno.\");",
+                  "}",
+                  "pm.variables.set(\"emailJSON\", JSON.stringify(email));",
+                  "pm.variables.set(\"passwordJSON\", JSON.stringify(password));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "let sesion;",
+                  "try { sesion = pm.response.json(); } catch (_) {}",
+                  "const valida = pm.response.code === 200 && typeof sesion?.token === \"string\" &&",
+                  "  sesion.token.split(\".\").length === 3 && sesion.usuario?.rol === \"administrador\";",
+                  "pm.test(\"JWT presente y rol administrador\", () => pm.expect(valida).to.equal(true));",
+                  "if (valida) {",
+                  "  pm.collectionVariables.set(\"tokenAdmin\", sesion.token); pm.variables.set(\"tokenAdmin\", sesion.token);",
+                  "} else {",
+                  "  pm.collectionVariables.unset(\"tokenAdmin\");",
+                  "  pm.execution.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login médico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{loginUrl}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":{{emailJSON}},\"password\":{{passwordJSON}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset(\"tokenMedico\");",
+                  "pm.variables.set(\"tokenMedico\", \"\");",
+                  "const email = pm.variables.get(\"medicoEmail\");",
+                  "const password = pm.variables.get(\"medicoPassword\");",
+                  "if (!email || !password) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Configura medicoEmail y medicoPassword como valores locales del entorno.\");",
+                  "}",
+                  "pm.variables.set(\"emailJSON\", JSON.stringify(email));",
+                  "pm.variables.set(\"passwordJSON\", JSON.stringify(password));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "let sesion;",
+                  "try { sesion = pm.response.json(); } catch (_) {}",
+                  "const valida = pm.response.code === 200 && typeof sesion?.token === \"string\" &&",
+                  "  sesion.token.split(\".\").length === 3 && sesion.usuario?.rol === \"medico\";",
+                  "pm.test(\"JWT presente y rol medico\", () => pm.expect(valida).to.equal(true));",
+                  "if (valida) {",
+                  "  pm.collectionVariables.set(\"tokenMedico\", sesion.token); pm.variables.set(\"tokenMedico\", sesion.token);",
+                  "} else {",
+                  "  pm.collectionVariables.unset(\"tokenMedico\");",
+                  "  pm.execution.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Preparación de datos",
+      "description": "Solo consulta pacientes y médicos existentes. Escoge referencias y horarios libres sin modificar sus registros. Requiere proveedores disponibles.",
+      "item": [
+        {
+          "name": "Preparar paciente y referencia inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{pacientesUrl}}/pacientes",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset(\"pacienteId\"); pm.collectionVariables.unset(\"pacienteInexistenteId\");",
+                  "if (!pm.collectionVariables.get(\"tokenAdmin\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta tokenAdmin. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const registros = pm.response.json();",
+                  "pm.test(\"Hay referencias de prueba disponibles\", () => {",
+                  "  pm.expect(registros).to.be.an(\"array\").and.not.empty;",
+                  "  registros.forEach(r => pm.expect(Number.isInteger(r.id) && r.id > 0).to.equal(true));",
+                  "});",
+                  "if (pm.response.code !== 200 || !Array.isArray(registros) || !registros.length) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"pacienteId\", registros[0].id); pm.variables.set(\"pacienteId\", registros[0].id);",
+                  "  pm.collectionVariables.set(\"pacienteInexistenteId\", Math.max(...registros.map(r => r.id)) + 1); pm.variables.set(\"pacienteInexistenteId\", Math.max(...registros.map(r => r.id)) + 1);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preparar médico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicosUrl}}/medicos",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset(\"medicoId\");",
+                  "if (!pm.collectionVariables.get(\"tokenAdmin\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta tokenAdmin. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const registros = pm.response.json();",
+                  "pm.test(\"Hay referencias de prueba disponibles\", () => {",
+                  "  pm.expect(registros).to.be.an(\"array\").and.not.empty;",
+                  "  registros.forEach(r => pm.expect(Number.isInteger(r.id) && r.id > 0).to.equal(true));",
+                  "});",
+                  "if (pm.response.code !== 200 || !Array.isArray(registros) || !registros.length) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "} else {",
+                  "  pm.collectionVariables.set(\"medicoId\", registros[0].id); pm.variables.set(\"medicoId\", registros[0].id);",
+                  "  ",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preparar horarios futuros libres",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Listado JSON con campos del contrato\", () => {",
+                  "  const citas = pm.response.json();",
+                  "  pm.expect(citas).to.be.an(\"array\");",
+                  "  citas.forEach(cita => pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\"));",
+                  "});",
+                  "if (pm.response.code === 200 && Array.isArray(pm.response.json())) {",
+                  "  const citas = pm.response.json();",
+                  "  const ocupados = new Set(citas.filter(c => c.medico_id === Number(pm.collectionVariables.get(\"medicoId\")) && c.estado !== \"cancelada\").map(c => c.fecha_hora));",
+                  "  const fecha = new Date(Date.now() + (90 * 24 * 60 + Math.floor(Math.random() * 1440)) * 60000);",
+                  "  fecha.setSeconds(0, 0);",
+                  "  const formato = d => d.getFullYear() + \"-\" + String(d.getMonth()+1).padStart(2,\"0\") + \"-\" +",
+                  "    String(d.getDate()).padStart(2,\"0\") + \"T\" + String(d.getHours()).padStart(2,\"0\") + \":\" + String(d.getMinutes()).padStart(2,\"0\");",
+                  "  const horarios = [];",
+                  "  while (horarios.length < 2) {",
+                  "    const valor = formato(fecha);",
+                  "    if (!ocupados.has(valor)) horarios.push(valor);",
+                  "    fecha.setMinutes(fecha.getMinutes()+1);",
+                  "  }",
+                  "  pm.collectionVariables.set(\"fechaPrueba\", horarios[0]); pm.variables.set(\"fechaPrueba\", horarios[0]);",
+                  "  pm.collectionVariables.set(\"fechaAuxiliar\", horarios[1]); pm.variables.set(\"fechaAuxiliar\", horarios[1]);",
+                  "  pm.collectionVariables.set(\"citaInexistenteId\", Math.max(0, ...citas.map(c => c.id)) + 1); pm.variables.set(\"citaInexistenteId\", Math.max(0, ...citas.map(c => c.id)) + 1);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Pruebas normales",
+      "description": "Conservar el orden del Runner. Los números mantienen la trazabilidad de los 26 casos históricos. Solo se editan y eliminan citas creadas por esta colección.",
+      "item": [
+        {
+          "name": "Health público",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{healthUrl}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Servicio saludable\", () => pm.expect(pm.response.json()).to.deep.equal({servicio:\"ms-citas\",estado:\"ok\"}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01 - Listar citas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Listado JSON con campos del contrato\", () => {",
+                  "  const citas = pm.response.json();",
+                  "  pm.expect(citas).to.be.an(\"array\");",
+                  "  citas.forEach(cita => pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - Cita inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaInexistenteId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaInexistenteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaInexistenteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe la cita\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 - ID inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas/abc",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"entero positivo\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 - Petición sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"Falta el token\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16 - Token inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "token-deliberadamente-invalido",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"Token inválido\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17 - GET con rol médico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenMedico}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"tokenMedico\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta tokenMedico. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Listado JSON con campos del contrato\", () => {",
+                  "  const citas = pm.response.json();",
+                  "  pm.expect(citas).to.be.an(\"array\");",
+                  "  citas.forEach(cita => pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18 - POST sin permisos de médico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenMedico}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"tokenMedico\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta tokenMedico. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"fechaPrueba\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta fechaPrueba. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"El rol medico no tiene permiso\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 - Crear cita válida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "Crea un registro propio en la base de pruebas y conserva su ID para la limpieza. Requiere permitirEscritura=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"fechaPrueba\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta fechaPrueba. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "",
+                  "if (pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Queda una cita propia pendiente en citaId. Ejecuta la limpieza antes de repetir.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
+                  "  pm.collectionVariables.set(\"citaId\", pm.response.json().id); pm.variables.set(\"citaId\", pm.response.json().id);",
+                  "}",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});",
+                  "pm.test(\"La respuesta conserva los datos enviados\", () => {",
+                  "  const enviado = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                  "  pm.expect(pm.response.json()).to.include(enviado);",
+                  "});",
+                  "pm.test(\"Location identifica la cita creada\", () => {",
+                  "  pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/citas/\" + pm.response.json().id + \"$\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - Obtener cita propia por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});",
+                  "pm.test(\"ID propio\", () => pm.expect(pm.response.json().id).to.equal(Number(pm.collectionVariables.get(\"citaId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 - Filtrar citas por estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas?estado=programada",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Listado JSON con campos del contrato\", () => {",
+                  "  const citas = pm.response.json();",
+                  "  pm.expect(citas).to.be.an(\"array\");",
+                  "  citas.forEach(cita => pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\"));",
+                  "});",
+                  "pm.test(\"Filtro y cita creada\", () => {",
+                  "  const citas = pm.response.json();",
+                  "  pm.expect(citas.some(c => c.id === Number(pm.collectionVariables.get(\"citaId\")))).to.equal(true);",
+                  "  citas.forEach(c => pm.expect(c.estado).to.equal(\"programada\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 - Crear cita inválida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": 0,\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"2000-01-01T09:00\",\n  \"sede\": \"Pasto\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"Datos inválidos\");",
+                  "});",
+                  "pm.test(\"Detalle de las validaciones\", () => {",
+                  "  const errores = pm.response.json().detalles;",
+                  "  pm.expect(errores).to.be.an(\"array\").and.not.empty;",
+                  "  for (const campo of [\"paciente_id\", \"fecha_hora\", \"sede\"]) {",
+                  "    pm.expect(errores.some(e => e.includes(campo))).to.equal(true);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 - Conflicto de horario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"El médico ya tiene una cita\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19 - POST autorizado de administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "Crea un registro propio en la base de pruebas y conserva su ID para la limpieza. Requiere permitirEscritura=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaAuxiliar}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"fechaPrueba\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta fechaPrueba. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "",
+                  "if (pm.collectionVariables.get(\"citaAuxId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Queda una cita propia pendiente en citaAuxId. Ejecuta la limpieza antes de repetir.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
+                  "  pm.collectionVariables.set(\"citaAuxId\", pm.response.json().id); pm.variables.set(\"citaAuxId\", pm.response.json().id);",
+                  "}",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});",
+                  "pm.test(\"La respuesta conserva los datos enviados\", () => {",
+                  "  const enviado = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                  "  pm.expect(pm.response.json()).to.include(enviado);",
+                  "});",
+                  "pm.test(\"Location identifica la cita creada\", () => {",
+                  "  pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/citas/\" + pm.response.json().id + \"$\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 - Conflicto de horario al actualizar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas/{{citaAuxId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"citaAuxId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaAuxId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"El médico ya tiene una cita\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 - Actualizar cita válida",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas/{{citaId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Bogotá\",\n  \"estado\": \"atendida\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});",
+                  "pm.test(\"La respuesta conserva los datos enviados\", () => {",
+                  "  const enviado = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                  "  pm.expect(pm.response.json()).to.include(enviado);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - Actualizar conservando horario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas/{{citaId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});",
+                  "pm.test(\"La respuesta conserva los datos enviados\", () => {",
+                  "  const enviado = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                  "  pm.expect(pm.response.json()).to.include(enviado);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 - Actualizar cita inexistente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas/{{citaInexistenteId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const propios = [\"citaId\", \"citaAuxId\", \"citaReferenciasId\"].map(k => Number(pm.collectionVariables.get(k)) || 0);",
+                  "const inexistente = Math.max(Number(pm.collectionVariables.get(\"citaInexistenteId\")) || 0, ...propios) + 1000;",
+                  "pm.collectionVariables.set(\"citaInexistenteId\", inexistente); pm.variables.set(\"citaInexistenteId\", inexistente);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaInexistenteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaInexistenteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe la cita\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20 - Crear cita con referencias válidas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "Crea un registro propio en la base de pruebas y conserva su ID para la limpieza. Requiere permitirEscritura=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"cancelada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"fechaPrueba\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta fechaPrueba. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "",
+                  "if (pm.collectionVariables.get(\"citaReferenciasId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Queda una cita propia pendiente en citaReferenciasId. Ejecuta la limpieza antes de repetir.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
+                  "  pm.collectionVariables.set(\"citaReferenciasId\", pm.response.json().id); pm.variables.set(\"citaReferenciasId\", pm.response.json().id);",
+                  "}",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});",
+                  "pm.test(\"La respuesta conserva los datos enviados\", () => {",
+                  "  const enviado = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                  "  pm.expect(pm.response.json()).to.include(enviado);",
+                  "});",
+                  "pm.test(\"Location identifica la cita creada\", () => {",
+                  "  pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/citas/\" + pm.response.json().id + \"$\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21 - Crear cita con paciente inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteInexistenteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteInexistenteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteInexistenteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe el paciente\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "22 - Obtener cita con relaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "23 - Listar citas compuestas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas",
+            "description": "La implementación de ms-citas usa ?ids= internamente. La respuesta compuesta se comprueba aquí. Para demostrar cantidad y URL de llamadas internas, observar registros HTTP en un entorno de pruebas."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Listado JSON con campos del contrato\", () => {",
+                  "  const citas = pm.response.json();",
+                  "  pm.expect(citas).to.be.an(\"array\");",
+                  "  citas.forEach(cita => pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\"));",
+                  "});",
+                  "pm.test(\"Relaciones compuestas en la cita propia\", () => {",
+                  "  const cita = pm.response.json().find(c => c.id === Number(pm.collectionVariables.get(\"citaId\")));",
+                  "  pm.expect(cita).to.be.an(\"object\");",
+                  "  pm.expect(cita.paciente.id).to.equal(Number(pm.collectionVariables.get(\"pacienteId\")));",
+                  "  pm.expect(cita.medico.id).to.equal(Number(pm.collectionVariables.get(\"medicoId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar pacientes por lotes ?ids=",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{pacientesUrl}}/pacientes?ids={{pacienteId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Lote contiene exclusivamente la referencia solicitada\", () => {",
+                  "  const registros = pm.response.json();",
+                  "  pm.expect(registros).to.be.an(\"array\").with.lengthOf(1);",
+                  "  pm.expect(registros[0].id).to.equal(Number(pm.collectionVariables.get(\"pacienteId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar medicos por lotes ?ids=",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicosUrl}}/medicos?ids={{medicoId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Lote contiene exclusivamente la referencia solicitada\", () => {",
+                  "  const registros = pm.response.json();",
+                  "  pm.expect(registros).to.be.an(\"array\").with.lengthOf(1);",
+                  "  pm.expect(registros[0].id).to.equal(Number(pm.collectionVariables.get(\"medicoId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 - Eliminar cita propia",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaId}}",
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin contenido\", () => pm.expect(pm.response.text()).to.equal(\"\"));",
+                  "if ([204, 404].includes(pm.response.code)) {",
+                  "  ",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 - Eliminar la misma cita nuevamente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"No existe la cita\");",
+                  "});",
+                  "if (pm.response.code === 404) { pm.collectionVariables.unset(\"citaId\"); pm.variables.set(\"citaId\", \"\"); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpiar cita auxiliar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaAuxId}}",
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaAuxId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaAuxId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin contenido\", () => pm.expect(pm.response.text()).to.equal(\"\"));",
+                  "if ([204, 404].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.unset(\"citaAuxId\"); pm.variables.set(\"citaAuxId\", \"\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpiar cita de referencias",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaReferenciasId}}",
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaReferenciasId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaReferenciasId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin contenido\", () => pm.expect(pm.response.text()).to.equal(\"\"));",
+                  "if ([204, 404].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.unset(\"citaReferenciasId\"); pm.variables.set(\"citaReferenciasId\", \"\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Limpieza de una ejecución interrumpida",
+      "description": "Seleccionar manualmente solo los IDs propios que queden pendientes. Se omite en la ejecución habitual. Requiere modoLimpieza=true y permitirEscritura=true.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (String(pm.variables.get(\"modoLimpieza\")) !== \"true\") pm.execution.skipRequest();"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Recuperar limpieza de citaId",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaId}}",
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin contenido\", () => pm.expect(pm.response.text()).to.equal(\"\"));",
+                  "if ([204, 404].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.unset(\"citaId\"); pm.variables.set(\"citaId\", \"\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recuperar limpieza de citaAuxId",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaAuxId}}",
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaAuxId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaAuxId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin contenido\", () => pm.expect(pm.response.text()).to.equal(\"\"));",
+                  "if ([204, 404].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.unset(\"citaAuxId\"); pm.variables.set(\"citaAuxId\", \"\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recuperar limpieza de citaReferenciasId",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaReferenciasId}}",
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaReferenciasId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaReferenciasId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin contenido\", () => pm.expect(pm.response.text()).to.equal(\"\"));",
+                  "if ([204, 404].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.unset(\"citaReferenciasId\"); pm.variables.set(\"citaReferenciasId\", \"\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "90 - Preparación manual de fallo",
+      "description": "Con ms-pacientes y ms-medicos disponibles, ejecutar 00 y 01, establecer modoFalloPacientes=preparar y permitirEscritura=true. Ejecutar solo esta carpeta.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.variables.get(\"modoFalloPacientes\") !== \"preparar\") pm.execution.skipRequest();"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Crear cita propia para degradación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "Crea un registro propio en la base de pruebas y conserva su ID para la limpieza. Requiere permitirEscritura=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"cancelada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"fechaPrueba\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta fechaPrueba. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "",
+                  "if (pm.collectionVariables.get(\"citaManualId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Queda una cita propia pendiente en citaManualId. Ejecuta la limpieza antes de repetir.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
+                  "  pm.collectionVariables.set(\"citaManualId\", pm.response.json().id); pm.variables.set(\"citaManualId\", pm.response.json().id);",
+                  "}",
+                  "pm.test(\"Contrato y relaciones de la cita\", () => {",
+                  "  const cita = pm.response.json();",
+                  "  pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\");",
+                  "  for (const campo of [\"id\", \"paciente_id\", \"medico_id\"]) {",
+                  "    pm.expect(cita[campo]).to.be.a(\"number\").and.above(0);",
+                  "    pm.expect(Number.isInteger(cita[campo])).to.equal(true);",
+                  "  }",
+                  "  pm.expect(cita.fecha_hora).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);",
+                  "  pm.expect([\"Cali\", \"Bogotá\", \"Medellín\"]).to.include(cita.sede);",
+                  "  pm.expect([\"programada\", \"atendida\", \"cancelada\"]).to.include(cita.estado);",
+                  "  pm.expect(cita.paciente).to.include.all.keys(\"id\", \"nombre\", \"documento\", \"eps\");",
+                  "  pm.expect(cita.medico).to.include.all.keys(\"id\", \"nombre\", \"especialidad\", \"sede\");",
+                  "  pm.expect(cita.paciente.id).to.equal(cita.paciente_id);",
+                  "  pm.expect(cita.medico.id).to.equal(cita.medico_id);",
+                  "});",
+                  "pm.test(\"La respuesta conserva los datos enviados\", () => {",
+                  "  const enviado = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                  "  pm.expect(pm.response.json()).to.include(enviado);",
+                  "});",
+                  "pm.test(\"Location identifica la cita creada\", () => {",
+                  "  pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/citas/\" + pm.response.json().id + \"$\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "91 - Proveedor detenido (manual)",
+      "description": "Solo en laboratorio autorizado, detener ms-pacientes externamente. Mantener ms-medicos y ms-citas disponibles. Establecer modoFalloPacientes=detenido. La colección nunca detiene servicios.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.variables.get(\"modoFalloPacientes\") !== \"detenido\") pm.execution.skipRequest();"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "24 - Listar con ms-pacientes detenido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/citas",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaManualId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaManualId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Listado JSON con campos del contrato\", () => {",
+                  "  const citas = pm.response.json();",
+                  "  pm.expect(citas).to.be.an(\"array\");",
+                  "  citas.forEach(cita => pm.expect(cita).to.include.all.keys(\"id\", \"paciente_id\", \"medico_id\", \"fecha_hora\", \"sede\", \"estado\", \"paciente\", \"medico\"));",
+                  "});",
+                  "pm.test(\"Degradación controlada de paciente\", () => {",
+                  "  const cita = pm.response.json().find(c => c.id === Number(pm.collectionVariables.get(\"citaManualId\")));",
+                  "  pm.expect(cita).to.be.an(\"object\");",
+                  "  pm.expect(cita.paciente).to.equal(null);",
+                  "  pm.expect(cita.medico).to.be.an(\"object\");",
+                  "  pm.expect(cita.aviso).to.include(\"ms-pacientes no disponible\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "25 - Crear con ms-pacientes detenido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/citas",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"cancelada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"pacienteId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta pacienteId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"medicoId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta medicoId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}",
+                  "if (!pm.collectionVariables.get(\"fechaPrueba\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta fechaPrueba. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 503\", () => pm.response.to.have.status(503));",
+                  "pm.test(\"Error JSON descriptivo\", () => {",
+                  "  pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(pm.response.json().error).to.include(\"ms-pacientes no está disponible\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "92 - Limpieza manual de fallo",
+      "description": "Reiniciar ms-pacientes, verificar su recuperación, establecer modoFalloPacientes=limpiar y ejecutar solo esta carpeta. Después vaciar modoFalloPacientes y desactivar permitirEscritura.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.variables.get(\"modoFalloPacientes\") !== \"limpiar\") pm.execution.skipRequest();"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Eliminar cita de degradación",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/citas/{{citaManualId}}",
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"citaManualId\")) {",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Falta citaManualId. Ejecuta primero la preparación y creación correspondientes.\");",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Sin contenido\", () => pm.expect(pm.response.text()).to.equal(\"\"));",
+                  "if ([204, 404].includes(pm.response.code)) {",
+                  "  pm.collectionVariables.unset(\"citaManualId\"); pm.variables.set(\"citaManualId\", \"\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

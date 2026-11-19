@@ -106,27 +106,27 @@ Las citas se intercambian como objetos JSON. Un registro contiene los siguientes
 }
 ```
 
-| Atributo | Tipo JSON | Obligatorio al crear | Regla |
-| --- | --- | --- | --- |
-| `id` | Número entero | No; generado por MySQL | Identificador positivo y único. |
-| `paciente_id` | Número entero | Sí | Entero positivo; debe existir en `ms-pacientes`. |
-| `medico_id` | Número entero | Sí | Entero positivo; debe existir en `ms-medicos`. |
-| `fecha_hora` | Cadena de texto | Sí | Formato `AAAA-MM-DDTHH:mm`; fecha y hora válidas y futuras. |
-| `sede` | Cadena de texto | Sí | `Cali`, `Bogotá` o `Medellín`. |
-| `estado` | Cadena de texto | No | `programada`, `atendida` o `cancelada`; por defecto `programada`. |
+| Atributo      | Tipo JSON       | Obligatorio al crear   | Regla                                                             |
+| ------------- | --------------- | ---------------------- | ----------------------------------------------------------------- |
+| `id`          | Número entero   | No; generado por MySQL | Identificador positivo y único.                                   |
+| `paciente_id` | Número entero   | Sí                     | Entero positivo; debe existir en `ms-pacientes`.                  |
+| `medico_id`   | Número entero   | Sí                     | Entero positivo; debe existir en `ms-medicos`.                    |
+| `fecha_hora`  | Cadena de texto | Sí                     | Formato `AAAA-MM-DDTHH:mm`; fecha y hora válidas y futuras.       |
+| `sede`        | Cadena de texto | Sí                     | `Cali`, `Bogotá` o `Medellín`.                                    |
+| `estado`      | Cadena de texto | No                     | `programada`, `atendida` o `cancelada`; por defecto `programada`. |
 
 En las respuestas GET, POST y PUT se agregan los objetos `paciente` y `medico` con información obtenida de los microservicios relacionados. Si alguno no está disponible durante una consulta, el objeto correspondiente puede ser `null` y se agrega `aviso`.
 
 ## Endpoints
 
-| Operación | Método | URI | Cuerpo | Respuesta exitosa | Errores posibles |
-| --- | --- | --- | --- | --- | --- |
-| Listar | GET | `/citas` | — | `200` + arreglo de citas | `401` |
-| Filtrar por estado | GET | `/citas?estado=programada` | — | `200` + arreglo filtrado | `401` |
-| Obtener | GET | `/citas/:id` | — | `200` + objeto de cita | `400`, `401`, `404` |
-| Crear | POST | `/citas` | JSON sin `id` | `201` + objeto y cabecera `Location` | `400`, `401`, `403`, `409`, `502`, `503` |
-| Actualizar | PUT | `/citas/:id` | JSON completo sin `id` | `200` + objeto actualizado | `400`, `401`, `403`, `404`, `409`, `502`, `503` |
-| Eliminar | DELETE | `/citas/:id` | — | `204` sin cuerpo | `400`, `401`, `403`, `404` |
+| Operación          | Método | URI                        | Cuerpo                 | Respuesta exitosa                    | Errores posibles                                |
+| ------------------ | ------ | -------------------------- | ---------------------- | ------------------------------------ | ----------------------------------------------- |
+| Listar             | GET    | `/citas`                   | —                      | `200` + arreglo de citas             | `401`                                           |
+| Filtrar por estado | GET    | `/citas?estado=programada` | —                      | `200` + arreglo filtrado             | `401`                                           |
+| Obtener            | GET    | `/citas/:id`               | —                      | `200` + objeto de cita               | `400`, `401`, `404`                             |
+| Crear              | POST   | `/citas`                   | JSON sin `id`          | `201` + objeto y cabecera `Location` | `400`, `401`, `403`, `409`, `502`, `503`        |
+| Actualizar         | PUT    | `/citas/:id`               | JSON completo sin `id` | `200` + objeto actualizado           | `400`, `401`, `403`, `404`, `409`, `502`, `503` |
+| Eliminar           | DELETE | `/citas/:id`               | —                      | `204` sin cuerpo                     | `400`, `401`, `403`, `404`                      |
 
 **Comprobación pública:** `GET /health` responde `200 OK` sin token.
 
@@ -280,6 +280,17 @@ Las citas se almacenan en MySQL, dentro de la base de datos `citas_db`. El repos
 
 Los datos permanecen almacenados después de reiniciar el microservicio. Se comprobó el funcionamiento del CRUD y las reglas de negocio mediante Postman y MySQL Workbench.
 
-La colección de pruebas se encuentra en `docs/MediRed IPS – ms-citas.postman_collection_2daSemana.json`, organizada en carpetas GET, POST, PUT y DELETE. Incluye las pruebas del CRUD, las validaciones de negocio, la autenticación JWT, los permisos por rol y las relaciones REST con los microservicios de pacientes y médicos.
+La colección canónica es [MediRed-IPS-ms-citas.postman_collection.json](docs/MediRed-IPS-ms-citas.postman_collection.json).
+Incorpora login de administrador y médico, URLs y credenciales mediante variables,
+captura automática de tokens e IDs, fechas futuras dinámicas y pruebas del CRUD,
+validaciones, permisos y relaciones REST.
+
+La [guía de Postman](docs/README-POSTMAN.md) explica la importación, la configuración
+local o por Gateway, los datos necesarios y el orden de ejecución. Las escrituras
+requieren una base de pruebas o autorización explícita y activar
+`permitirEscritura=true`. Los casos con un proveedor detenido se ejecutan por
+separado en un laboratorio autorizado.
+
+Las dos colecciones anteriores se conservan en `docs/` como antecedentes del taller.
 
 Los identificadores de pacientes y médicos se almacenan como referencias para la integración REST entre microservicios, sin claves foráneas entre sus bases de datos.

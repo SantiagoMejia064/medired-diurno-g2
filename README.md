@@ -9,26 +9,28 @@ Aplicación web para la gestión de servicios médicos de MediRed IPS, desarroll
 
 | Integrante              | GitHub              | Microservicio |
 | ----------------------- | ------------------- | ------------- |
-| Santiago Mejía          | SantiagoMejia064    | ms-citas      |
-| Valentina Ochoa         | d8zval              | ms-pacientes  |
-| Jean Carlo Chantre      | Chantrix11          | ms-medicos    |
-| Steven Camilo Franco    | StevenNorduss       | ms-historias  |
+| Santiago Mejía Suárez | SantiagoMejia064 | ms-citas |
+| Valentina Ochoa Hernández | d8zval | ms-pacientes |
+| Jean Carlo Caicedo Chantre | Chantrix11 | ms-medicos |
+| Steven Camilo Franco Bocanegra | StevenNorduss | ms-historias |
 
 ## Microservicios
 
 | Carpeta      | Entidad            | Responsable    | Puerto | Depende de               |
 | ------------ | ------------------ | -------------- | ------ | ------------------------ |
-| ms-usuarios  | Usuarios           | Docente        | 3001   | Ninguno                  |
-| ms-pacientes | Pacientes          | [Integrante]   | 3002   | Ninguno                  |
-| ms-medicos   | Médicos            | [Integrante]   | 3003   | Ninguno                  |
-| ms-citas     | Citas médicas      | Santiago Mejía | 3004   | ms-pacientes, ms-medicos |
-| ms-historias | Historias clínicas | Steven Franco  | 3005   | ms-pacientes, ms-medicos |
+| ms-usuarios  | Usuarios           | Servicio grupal/base proporcionado por la docente | 3001 | Ninguno |
+| ms-pacientes | Pacientes          | Valentina Ochoa Hernández | 3002 | Ninguno |
+| ms-medicos   | Médicos            | Jean Carlo Caicedo Chantre | 3003 | Ninguno |
+| ms-citas     | Citas médicas      | Santiago Mejía Suárez | 3004 | ms-pacientes, ms-medicos |
+| ms-historias | Historias clínicas | Steven Camilo Franco Bocanegra | 3005 | ms-pacientes, ms-medicos |
 
 ## Estructura del repositorio
 
 ```text
 medired-diurno-g2/
 ├── README.md
+├── frontend/          # Interfaz web
+├── deploy/            # Documentación y configuración del despliegue
 ├── ms-usuarios/       # Gestión de usuarios
 ├── ms-pacientes/      # Gestión de pacientes
 ├── ms-medicos/        # Gestión de médicos
@@ -55,6 +57,10 @@ npm install
 **2. Crear el archivo `.env`**
 
 Copiar el contenido de `.env.example` a un archivo llamado `.env` y verificar el puerto asignado.
+
+En cada entorno desplegado, el archivo `ms-usuarios/.env` debe incluir
+`ROLES=administrador,admisiones,medico`, como indica su `.env.example`.
+Estos roles coinciden con los utilizados por el frontend y los microservicios.
 
 **3. Iniciar el servicio**
 
