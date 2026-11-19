@@ -1,13 +1,16 @@
 [Unit]
-Description=Microservicio historias - MediRed IPS
-After=network.target
+Description=Microservicio de Historias de MediRed
+After=network-online.target
+Wants=network-online.target
 
 [Service]
+Type=simple
 User=nodeapps
 Group=nodeapps
 WorkingDirectory=/srv/medired/app/ms-historias
-ExecStart=/usr/bin/node --env-file=.env src/index.js
+ExecStart=/usr/bin/node --env-file=/srv/medired/app/ms-historias/.env /srv/medired/app/ms-historias/src/index.js
 Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
