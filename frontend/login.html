@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#E6ECEA">
+  <title>Acceso | MediRed IPS</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <script type="module" src="js/sesion.js"></script>
+</head>
+<body class="acceso">
+  <main class="tarjeta tarjeta-acceso">
+    <div class="marca">
+      <img src="css/pulso.svg" alt="" width="42" height="42">
+      <span>MediRed <small>IPS</small></span>
+    </div>
+    <p class="etiqueta">Gestión de citas</p>
+    <h1>Acceso al panel</h1>
+    <p class="secundario">Ingresa con las credenciales de tu cuenta institucional.</p>
+    <form id="acceso">
+      <label for="email">Correo electrónico</label>
+      <input id="email" name="email" type="email" required autocomplete="username">
+      <label for="password">Contraseña</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+      <button class="boton primario" type="submit">Iniciar sesión</button>
+      <p id="error-acceso" class="error" role="alert" aria-live="polite"></p>
+    </form>
+  </main>
+</body>
+</html>

@@ -78,3 +78,36 @@ sudo systemctl reload apache2
 5. Confirmar que las modificaciones persisten en MySQL al recargar.
 
 > Este paquete se preparó a partir del frontend y los controladores/modelos del repositorio entregado. No se ha podido ejecutar contra las máquinas virtuales ni validar credenciales o disponibilidad de los microservicios desde este entorno.
+
+## Autenticación, errores y permisos por rol
+
+El login usa `POST /api/usuarios/login` sin adjuntar JWT. Un `401` en esa ruta significa correo/contraseña incorrectos o cuenta inactiva; **no** debe mostrarse como sesión vencida ni borrar una sesión previa. En las demás rutas, un `401` significa token ausente, inválido o vencido: se elimina únicamente `token` y `usuario` de `sessionStorage` y se redirige al acceso.
+
+El cliente `js/api.js` centraliza mensajes para errores HTTP `400`, `401`, `403`, `404`, `405`, `409`, `413`, `415`, `422`, `429`, `500`, `502`, `503` y `504`, además de fallos de conexión. El mensaje concreto devuelto por el microservicio tiene prioridad cuando existe.
+
+### Matriz de permisos verificada en las rutas del backend
+
+| Módulo | Administrador | Admisiones | Médico |
+|---|---|---|---|
+| Pacientes: consultar | Sí | Sí | Sí |
+| Pacientes: crear, editar, eliminar | Sí | No | No |
+| Médicos: consultar | Sí | Sí | Sí |
+| Médicos: crear, editar, eliminar | Sí | No | No |
+| Citas: consultar | Sí | Sí | Sí |
+| Citas: crear, editar, eliminar | Sí | Sí | No |
+| Historias clínicas: consultar | Sí | Sí | Sí |
+| Historias clínicas: crear, editar, eliminar | Sí | No | Sí |
+
+Los botones de crear, editar y eliminar se muestran únicamente a los roles autorizados. El backend sigue siendo la autoridad: si se intenta una operación no permitida directamente, debe responder `403` y la interfaz muestra ese mensaje. Ocultar botones por sí solo no es seguridad.
+
+### Pruebas que deben realizarse
+
+1. Login correcto para cada uno de los tres roles.
+2. Contraseña incorrecta: mensaje de credenciales incorrectas; no mostrar “sesión vencida”.
+3. Token vencido o inválido en una página privada: limpiar `token` y `usuario`, y volver al login.
+4. Médico: puede consultar pacientes, médicos y citas; no debe ver botones para crear/editar/eliminar esos registros. Sí puede gestionar historias clínicas.
+5. Admisiones: puede consultar pacientes y médicos sin botones de modificación; puede crear/editar/eliminar citas; historias clínicas solo consulta.
+6. Administrador: puede realizar operaciones CRUD en los cuatro módulos.
+7. Validación `400/422`, no encontrado `404`, conflicto `409`, método incorrecto `405` y servicios no disponibles `502/503/504` deben mostrarse sin romper la pantalla.
+
+Los permisos de la interfaz reflejan las rutas actuales de los microservicios. Si el equipo cambia los middlewares del backend, debe actualizar esta matriz y las reglas de visibilidad del frontend.

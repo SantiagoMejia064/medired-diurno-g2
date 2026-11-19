@@ -17,12 +17,12 @@ export const tieneSesion = () => Boolean(sessionStorage.getItem("token") && obte
 export function cerrarSesion() {
   sessionStorage.removeItem("token");
   sessionStorage.removeItem("usuario");
-  location.replace("/index.html");
+  location.replace("/login.html");
 }
 
 export function protegerPagina() {
   if (!tieneSesion()) {
-    location.replace("/index.html");
+    location.replace("/login.html");
     return false;
   }
   document.querySelectorAll("[data-rol]").forEach(el => el.textContent = nombreRol());
@@ -45,7 +45,7 @@ if (formulario) {
     try {
       const email = formulario.elements.email.value.trim();
       const password = formulario.elements.password.value;
-      const resultado = await apiPost("/usuarios/login", { email, password });
+      const resultado = await apiPost("/usuarios/login", { email, password }, { auth: false });
       if (!resultado?.token || !resultado?.usuario?.rol || !NOMBRES_ROL[resultado.usuario.rol]) {
         throw new Error("El servidor no devolvió una sesión válida o el rol no está habilitado.");
       }
@@ -53,7 +53,9 @@ if (formulario) {
       sessionStorage.setItem("usuario", JSON.stringify(resultado.usuario));
       location.replace("/inicio.html");
     } catch (error) {
-      aviso.textContent = error.message || "No fue posible iniciar sesión.";
+      aviso.textContent = error.status === 401
+        ? "Correo o contraseña incorrectos, o cuenta inactiva. Verifica tus datos."
+        : (error.message || "No fue posible iniciar sesión.");
     } finally {
       boton.disabled = false;
       boton.textContent = "Iniciar sesión";
