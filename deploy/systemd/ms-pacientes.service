@@ -1,0 +1,13 @@
+[Unit]
+Description=Microservicio pacientes - MediRed IPS
+After=network.target
+
+[Service]
+User=nodeapps
+Group=nodeapps
+WorkingDirectory=/srv/medired/app/ms-pacientes
+ExecStart=/usr/bin/node --env-file=.env src/index.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
