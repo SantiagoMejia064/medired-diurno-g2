@@ -445,3 +445,71 @@ En `JWT_SECRET`, usa la misma clave que tiene configurada `ms-usuarios`. Mantén
 ```
 
 Si Médicos está detenido al consultar, Historias devuelve `200 OK` con los datos disponibles, `medico: null` y `aviso: "ms-medicos no está disponible"`. Si falla Pacientes, el campo `paciente` queda en `null` y el aviso identifica a ese servicio. MySQL guarda los identificadores de referencia. Los datos relacionados se agregan al construir la respuesta.
+
+## Pruebas de Historias para Taller 3
+
+La [guía de Postman](docs/README-POSTMAN.md) explica cómo importar los entornos
+Gateway o Local y las dos colecciones de Historias. El entorno contiene URLs,
+cuentas y tokens. Los logins de Administrador, Médico y Admisiones guardan los
+tokens automáticamente; las fechas e IDs los calculan los scripts.
+
+La colección normal ejecuta preparación, CRUD, permisos, relaciones y limpieza.
+La colección complementaria permite preparar y comprobar reinicios y caída de
+Médicos por carpetas separadas. Solo se interviene en la terminal para reiniciar
+Historias o detener y restaurar Médicos; no hay que cambiar modos ni fases del
+entorno. Cada prueba debe ejecutarse en el laboratorio para acreditar su resultado.
+
+
+## Despliegue y resultados del Taller 3
+
+Responsable de Historias e integrador de aplicación en servidor2: Steven Camilo Franco Bocanegra. Las secciones de Taller 1 y Taller 2 anteriores conservan el recorrido histórico; para la entrega actual se usan MySQL, JWT y las relaciones REST descritas en el [contrato vigente](CONTRATO.md).
+
+### Configuración del laboratorio
+
+Servidor2 (`svrBog2`, `172.16.2.43`) ejecuta Apache y los cinco servicios. MySQL está en servidor1 (`172.16.2.42:3306`). Historias usa `historias_db` con `historias_user`, restringido al origen de servidor2. Copiar `.env.example` a `.env` y completar la contraseña vigente y el mismo `JWT_SECRET` de Usuarios. El archivo de ejemplo contiene la topología de las VMs: para un entorno completamente local también hay que ajustar `DB_HOST` y preparar esa base.
+
+| Componente | Dirección o ubicación |
+| --- | --- |
+| Historias | `127.0.0.1:3005`, `HOST=127.0.0.1` |
+| Usuarios | `127.0.0.1:3001` |
+| Pacientes y Médicos | `127.0.0.1:3002` y `127.0.0.1:3003` |
+| Código | `/srv/medired/app/ms-historias` |
+| Frontend publicado | `/var/www/app` |
+| Acceso desde Windows | `http://app.medired.com` y `/api/historias` |
+
+Postman Local usa el loopback del equipo donde se ejecuta su Agent: no permite alcanzar automáticamente el loopback de la VM. Desde Windows se utiliza Gateway, con conectividad al laboratorio y resolución de `app.medired.com`. La colección no hace accesible el laboratorio desde una red externa; quien quiera reproducir las pruebas debe disponer de los servidores y la configuración indicada.
+
+### Servicio y gateway
+
+La unidad [ms-historias.service](../deploy/systemd/ms-historias.service) utiliza `nodeapps`, rutas absolutas para `.env` e `index.js`, `network-online.target`, `Restart=on-failure` y `RestartSec=5`. Requiere Node compatible con `--env-file` y dependencias instaladas según el proyecto. Para aplicar una actualización de la unidad en servidor2, conservar primero una copia de la unidad instalada y luego ejecutar desde `/srv/medired/app`:
+
+```bash
+sudo install -m 644 deploy/systemd/ms-historias.service /etc/systemd/system/ms-historias.service
+sudo systemctl daemon-reload
+sudo systemctl enable ms-historias
+sudo systemctl restart ms-historias
+systemctl is-active ms-historias
+curl -i http://127.0.0.1:3005/health
+```
+
+Estos pasos actualizan Historias; no sustituyen la preparación de MySQL, cuentas, permisos y despliegue de los demás servicios. La cuenta `nodeapps` debe poder leer el código y su `.env`. La configuración de Apache [app.conf](../deploy/apache/app.conf) publica las cinco rutas `/api` y usa `DirectoryIndex login.html index.html`. La captura del 19 de noviembre confirma esa línea en el archivo activo y `Syntax OK`; el aviso AH00558 sobre el nombre global de Apache se conserva como observación y no invalida ese resultado. La apertura de la raíz en incógnito muestra el login.
+
+### Resultados ejecutados por Steven el 19 de noviembre de 2026
+
+| Recorrido | Comprobaciones aprobadas | Evidencia |
+| --- | --- | --- |
+| Colección normal simplificada por gateway | 73, sin fallos ni errores | `223823.png` |
+| Preparación de caída | 7, sin fallos ni errores | `223931.png` |
+| Médicos detenido | 7; GET parcial 200 y POST 503 esperados | `224037.png` |
+| Médicos recuperado y limpieza | 5; GET 200 y DELETE 204 | `224123.png` |
+
+Los nombres abreviados corresponden a `Captura de pantalla 2026-11-19 HHMMSS.png`. Son aserciones del Runner, no números de solicitudes. La prueba normal incluye autenticación de los tres roles, CRUD, permisos y relaciones. Los resultados fueron ejecutados por Steven en las VMs; esta actualización documental no vuelve a ejecutar las pruebas.
+
+El navegador muestra el rechazo de escritura con «ms-medicos no está disponible» (`224435`) y el registro con nombres relacionados tras recuperar el proveedor (`224637`). La captura de Network muestra GET `/api/historias` 200 y Authorization Bearer (`225316`); el journal muestra una GET por lote a Pacientes y una a Médicos (`225509`). Los logs de Médicos todavía incluyen SQL y datos de diagnóstico adicionales.
+
+La persistencia después de reiniciar Historias cuenta con evidencia histórica y una consulta posterior de la historia 17 aportada en el chat. No se presenta como una ejecución nueva de las carpetas simplificadas de persistencia. Los pasos y límites están en la [guía de Postman](docs/README-POSTMAN.md). Las capturas y el borrador personal de Steven se conservan por separado y no se incluyen en el repositorio.
+
+
+### Preparación de usuarios para Postman
+
+Los environments de `docs` incluyen correos editables y contraseñas y tokens vacíos. Las cuentas deben existir en la base de Usuarios. La [guía de Postman](docs/README-POSTMAN.md#cómo-preparar-las-cuentas-para-iniciar-sesión) explica el administrador inicial de una instalación nueva, el cambio de su contraseña y la [colección opcional de preparación](docs/ms-usuarios-acceso-historias.postman_collection.json) para crear Médico y Admisiones solo si faltan. La preparación usa las mismas variables de los entornos actuales; las pruebas normales de Historias no crean usuarios.
