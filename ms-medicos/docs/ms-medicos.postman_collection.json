@@ -1,0 +1,1566 @@
+{
+  "info": {
+    "name": "MediRed IPS - Médicos - Pruebas normales",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Responsable: Jean Carlo Caicedo Chantre. Modelo de entorno y logins basado en Historias. Ejecutar 00 a 04 en laboratorio: tres roles, CRUD, validaciones, lotes y limpieza de un médico propio. 90 solo recupera una ejecución interrumpida. No modifica cuentas de Usuarios. Resultados Gateway y capturas pendientes del autor."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token_administrador}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "medicoPruebaId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "registroPrueba",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nombrePrueba",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "origenMedicos",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "origenUsuarios",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "creacionPendiente",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "propiedadVerificada",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "medicoInexistenteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ultimoMedicoEliminadoId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+          "for(const key of ['medicos_url','usuarios_url']) { const v=pm.environment.get(key); if(!v || !/^https?:\\/\\//.test(v) || v.endsWith('/')) bloquear('Configurar '+key+' como origen/prefijo sin barra final.');pm.variables.set(key,v); }",
+          "if(pm.collectionVariables.get('medicoPruebaId') || pm.collectionVariables.get('creacionPendiente')==='true') {",
+          " if(pm.collectionVariables.get('origenMedicos')!==pm.environment.get('medicos_url') || pm.collectionVariables.get('origenUsuarios')!==pm.environment.get('usuarios_url')) bloquear('Cambió el destino con un registro pendiente. Volver al entorno original antes de limpiar.');",
+          "}",
+          "for(const key of ['medicoPruebaId','registroPrueba','nombrePrueba','medicoInexistenteId','ultimoMedicoEliminadoId']) pm.variables.set(key,pm.collectionVariables.get(key)||'');",
+          "for(const key of ['token_administrador','token_admisiones','token_medico']) pm.variables.set(key,pm.environment.get(key)||'');",
+          "pm.variables.set('health_url',pm.environment.get('health_url')||'');"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Acceso",
+      "item": [
+        {
+          "name": "Acceso - Administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuarios_url}}/usuarios/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{{credenciales_login}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(pm.collectionVariables.get('medicoPruebaId') || pm.collectionVariables.get('creacionPendiente')==='true') bloquear('Hay un registro pendiente; usar 90 - Recuperación y limpieza antes de repetir.');",
+                  "for(const rol of ['admin','medico','admisiones']) for(const campo of ['email','password']) if(!pm.environment.get(rol+'_'+campo)) bloquear('Completar '+rol+'_'+campo+' en el environment local.');",
+                  "for(const key of ['ultimoMedicoEliminadoId','medicoInexistenteId','propiedadVerificada']) pm.collectionVariables.unset(key);",
+                  "for(const key of ['token_administrador','token_medico','token_admisiones']) pm.environment.unset(key);",
+                  "pm.environment.unset('token_administrador');",
+                  "const email=pm.environment.get('admin_email'), password=pm.environment.get('admin_password');",
+                  "if(!email || !password) bloquear('Completar credenciales locales de Administrador.');",
+                  "pm.variables.set('credenciales_login',JSON.stringify({email,password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Login sin JSON: revisar Gateway y conectividad.'); }",
+                  "const valido=pm.response.code===200 && /^[^.]+\\.[^.]+\\.[^.]+$/.test(datos.token||'') && datos.usuario?.rol==='administrador';",
+                  "pm.test('JWT y rol administrador',()=>pm.expect(valido).to.eql(true));",
+                  "if(!valido) { pm.environment.unset('token_administrador'); detener('Login de Administrador fallido; revisar cuenta activa, contraseña y rol.'); }",
+                  "pm.environment.set('token_administrador',datos.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acceso - Admisiones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuarios_url}}/usuarios/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{{credenciales_login}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "",
+                  "pm.environment.unset('token_admisiones');",
+                  "const email=pm.environment.get('admisiones_email'), password=pm.environment.get('admisiones_password');",
+                  "if(!email || !password) bloquear('Completar credenciales locales de Admisiones.');",
+                  "pm.variables.set('credenciales_login',JSON.stringify({email,password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Login sin JSON: revisar Gateway y conectividad.'); }",
+                  "const valido=pm.response.code===200 && /^[^.]+\\.[^.]+\\.[^.]+$/.test(datos.token||'') && datos.usuario?.rol==='admisiones';",
+                  "pm.test('JWT y rol admisiones',()=>pm.expect(valido).to.eql(true));",
+                  "if(!valido) { pm.environment.unset('token_admisiones'); detener('Login de Admisiones fallido; revisar cuenta activa, contraseña y rol.'); }",
+                  "pm.environment.set('token_admisiones',datos.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acceso - Médico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuarios_url}}/usuarios/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{{credenciales_login}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "",
+                  "pm.environment.unset('token_medico');",
+                  "const email=pm.environment.get('medico_email'), password=pm.environment.get('medico_password');",
+                  "if(!email || !password) bloquear('Completar credenciales locales de Médico.');",
+                  "pm.variables.set('credenciales_login',JSON.stringify({email,password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Login sin JSON: revisar Gateway y conectividad.'); }",
+                  "const valido=pm.response.code===200 && /^[^.]+\\.[^.]+\\.[^.]+$/.test(datos.token||'') && datos.usuario?.rol==='medico';",
+                  "pm.test('JWT y rol medico',()=>pm.expect(valido).to.eql(true));",
+                  "if(!valido) { pm.environment.unset('token_medico'); detener('Login de Médico fallido; revisar cuenta activa, contraseña y rol.'); }",
+                  "pm.environment.set('token_medico',datos.token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Salud opcional",
+      "item": [
+        {
+          "name": "Estado del servicio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{health_url}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(!pm.environment.get('health_url')) { pm.execution.skipRequest(); console.log('Health omitido: no hay ruta pública configurada.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "pm.test('Salud de ms-medicos',()=>{const d=pm.response.json();pm.expect(d.servicio).to.eql('ms-medicos');pm.expect(d.estado).to.eql('ok');});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Preparación y CRUD",
+      "item": [
+        {
+          "name": "Listar (Autorizado por el token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Listado sin JSON'); }",
+                  "pm.test('Listado de médicos',()=>pm.expect(datos).to.be.an('array'));",
+                  "if(pm.response.code!==200 || !Array.isArray(datos)) detener('No se pudo preparar el listado.');",
+                  "const ids=datos.map(x=>Number(x.id));",
+                  "if(ids.some(x=>!Number.isSafeInteger(x)||x<=0)) detener('IDs no válidos en el listado.');",
+                  "const inexistente=Math.max(0,...ids)+1000000;",
+                  "if(inexistente>2147483647) detener('Sin margen seguro para calcular el ID inexistente.');",
+                  "pm.collectionVariables.set('medicoInexistenteId',inexistente);",
+                  "pm.collectionVariables.set('registroPrueba','JC-'+Date.now()+'-'+pm.variables.replaceIn('{{$randomUUID}}').slice(0,8));",
+                  "pm.collectionVariables.set('nombrePrueba','Prueba Postman Jean Carlo');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear médico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(pm.collectionVariables.get('medicoPruebaId') || pm.collectionVariables.get('creacionPendiente')==='true') bloquear('Ya existe una creación pendiente.');",
+                  "if(!pm.collectionVariables.get('registroPrueba')) bloquear('Ejecutar primero el listado de preparación.');",
+                  "pm.collectionVariables.set('origenMedicos',pm.environment.get('medicos_url'));",
+                  "pm.collectionVariables.set('origenUsuarios',pm.environment.get('usuarios_url'));",
+                  "pm.collectionVariables.set('creacionPendiente','true');",
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201 esperado',()=>pm.response.to.have.status(201));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Creación sin JSON; conservar la marca y revisar registros antes de repetir.'); }",
+                  "if(pm.response.code===201 && Number.isInteger(datos.id) && datos.id>0) {",
+                  " pm.collectionVariables.set('medicoPruebaId',datos.id); pm.collectionVariables.unset('creacionPendiente');",
+                  " console.log('Médico propio creado: ID='+datos.id+'; registro='+pm.collectionVariables.get('registroPrueba'));",
+                  "}",
+                  "if(pm.response.code>=400 && pm.response.code<500) pm.collectionVariables.unset('creacionPendiente');",
+                  "pm.test('ID y marca del médico creado',()=>{pm.expect(datos.id).to.be.a('number').above(0);pm.expect(datos.registro_medico).to.eql(pm.collectionVariables.get('registroPrueba'));});",
+                  "pm.test('Location identifica el recurso',()=>pm.expect(pm.response.headers.get('Location')).to.match(new RegExp('/medicos/'+datos.id+'$')));",
+                  "if(pm.response.code!==201 || !pm.collectionVariables.get('medicoPruebaId')) detener('Creación fallida. Revisar la respuesta y limpiar si quedó un registro pendiente.');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('propiedadVerificada');",
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Respuesta no JSON al verificar el médico propio.'); }",
+                  "const esPropio=pm.response.code===200 && String(datos.id)===String(pm.collectionVariables.get('medicoPruebaId')) && datos.registro_medico===pm.collectionVariables.get('registroPrueba') && datos.nombre===pm.collectionVariables.get('nombrePrueba') && datos.especialidad==='General' && ['Cali','Bogotá'].includes(datos.sede);",
+                  "pm.test('Registro propio y atributos verificados',()=>pm.expect(esPropio).to.eql(true));",
+                  "if(!esPropio) detener('El registro no coincide con la marca y atributos propios. No modificar ni borrar.');",
+                  "pm.collectionVariables.set('propiedadVerificada',String(datos.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Médico inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoInexistenteId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404 esperado',()=>pm.response.to.have.status(404));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Médicos por ID's",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos?ids={{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "pm.test('Lote contiene exactamente el ID solicitado',()=>{const d=pm.response.json();pm.expect(d).to.be.an('array').with.lengthOf(1);pm.expect(String(d[0].id)).to.eql(String(pm.collectionVariables.get('medicoPruebaId')));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ID no numérico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/abc"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400 esperado',()=>pm.response.to.have.status(400));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lote con ID inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos?ids=abc"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400 esperado',()=>pm.response.to.have.status(400));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtro por especialidad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos?especialidad=General"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "pm.test('Filtro respeta especialidad e incluye el médico propio',()=>{const d=pm.response.json();pm.expect(d).to.be.an('array');pm.expect(d.some(x=>String(x.id)===String(pm.collectionVariables.get('medicoPruebaId')))).to.eql(true);d.forEach(x=>pm.expect(x.especialidad.toLowerCase()).to.eql('general'));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registro médico duplicado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409 esperado',()=>pm.response.to.have.status(409));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ausencia de especialidad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{\"especialidad\":\"\"}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400 esperado',()=>pm.response.to.have.status(400));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);",
+                  "pm.test('Detalles de validación',()=>pm.expect(pm.response.json().detalles).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sede incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{\"sede\":\"Barranquilla\"}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400 esperado',()=>pm.response.to.have.status(400));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);",
+                  "pm.test('Detalles de validación',()=>pm.expect(pm.response.json().detalles).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar médico propio antes de actualizar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('propiedadVerificada');",
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Respuesta no JSON al verificar el médico propio.'); }",
+                  "const esPropio=pm.response.code===200 && String(datos.id)===String(pm.collectionVariables.get('medicoPruebaId')) && datos.registro_medico===pm.collectionVariables.get('registroPrueba') && datos.nombre===pm.collectionVariables.get('nombrePrueba') && datos.especialidad==='General' && ['Cali','Bogotá'].includes(datos.sede);",
+                  "pm.test('Registro propio y atributos verificados',()=>pm.expect(esPropio).to.eql(true));",
+                  "if(!esPropio) detener('El registro no coincide con la marca y atributos propios. No modificar ni borrar.');",
+                  "pm.collectionVariables.set('propiedadVerificada',String(datos.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar médico por ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "if(pm.collectionVariables.get('propiedadVerificada')!==String(pm.collectionVariables.get('medicoPruebaId'))) bloquear('Verificar primero la propiedad mediante GET.');",
+                  "pm.collectionVariables.unset('propiedadVerificada');",
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{\"sede\":\"Bogotá\"}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "pm.test('Actualización del médico propio',()=>{const d=pm.response.json();pm.expect(String(d.id)).to.eql(String(pm.collectionVariables.get('medicoPruebaId')));pm.expect(d.registro_medico).to.eql(pm.collectionVariables.get('registroPrueba'));pm.expect(d.sede).to.eql('Bogotá');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar cambios guardados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('propiedadVerificada');",
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Respuesta no JSON al verificar el médico propio.'); }",
+                  "const esPropio=pm.response.code===200 && String(datos.id)===String(pm.collectionVariables.get('medicoPruebaId')) && datos.registro_medico===pm.collectionVariables.get('registroPrueba') && datos.nombre===pm.collectionVariables.get('nombrePrueba') && datos.especialidad==='General' && ['Cali','Bogotá'].includes(datos.sede);",
+                  "pm.test('Registro propio y atributos verificados',()=>pm.expect(esPropio).to.eql(true));",
+                  "if(!esPropio) detener('El registro no coincide con la marca y atributos propios. No modificar ni borrar.');",
+                  "pm.collectionVariables.set('propiedadVerificada',String(datos.id));",
+                  "pm.test('Sede persistida',()=>pm.expect(datos.sede).to.eql('Bogotá'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar médico inexistente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos/{{medicoInexistenteId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{}}));",
+                  "const d=JSON.parse(pm.variables.get('datos_medico'));d.registro_medico+='-ausente';pm.variables.set('datos_medico',JSON.stringify(d));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404 esperado',()=>pm.response.to.have.status(404));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Seguridad y roles",
+      "item": [
+        {
+          "name": "Listar sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401 esperado',()=>pm.response.to.have.status(401));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "invalid",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401 esperado',()=>pm.response.to.have.status(401));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar como Admisiones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admisiones}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "pm.test('Listado autorizado',()=>pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear como Admisiones sin permiso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admisiones}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403 esperado',()=>pm.response.to.have.status(403));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar como Admisiones sin permiso",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admisiones}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403 esperado',()=>pm.response.to.have.status(403));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar como Admisiones sin permiso",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admisiones}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403 esperado',()=>pm.response.to.have.status(403));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar como Médico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_medico}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "pm.test('Listado autorizado',()=>pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear como Médico sin permiso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_medico}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403 esperado',()=>pm.response.to.have.status(403));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar como Médico sin permiso",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{{datos_medico}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_medico}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "pm.variables.set('datos_medico',JSON.stringify({nombre:pm.collectionVariables.get('nombrePrueba'),registro_medico:pm.collectionVariables.get('registroPrueba'),especialidad:'General',sede:'Cali',...{}}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403 esperado',()=>pm.response.to.have.status(403));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar como Médico sin permiso",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_medico}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403 esperado',()=>pm.response.to.have.status(403));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Limpieza final",
+      "item": [
+        {
+          "name": "Verificar médico propio antes de eliminar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('propiedadVerificada');",
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Respuesta no JSON al verificar el médico propio.'); }",
+                  "const esPropio=pm.response.code===200 && String(datos.id)===String(pm.collectionVariables.get('medicoPruebaId')) && datos.registro_medico===pm.collectionVariables.get('registroPrueba') && datos.nombre===pm.collectionVariables.get('nombrePrueba') && datos.especialidad==='General' && ['Cali','Bogotá'].includes(datos.sede);",
+                  "pm.test('Registro propio y atributos verificados',()=>pm.expect(esPropio).to.eql(true));",
+                  "if(!esPropio) detener('El registro no coincide con la marca y atributos propios. No modificar ni borrar.');",
+                  "pm.collectionVariables.set('propiedadVerificada',String(datos.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar médico existente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "if(pm.collectionVariables.get('propiedadVerificada')!==String(pm.collectionVariables.get('medicoPruebaId'))) bloquear('Verificar primero la propiedad mediante GET.');",
+                  "pm.collectionVariables.unset('propiedadVerificada');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204 esperado',()=>pm.response.to.have.status(204));",
+                  "pm.test('Respuesta sin cuerpo',()=>pm.expect(pm.response.text()).to.eql(''));",
+                  "if(pm.response.code===204) { pm.collectionVariables.set('ultimoMedicoEliminadoId',pm.collectionVariables.get('medicoPruebaId')); console.log('Médico propio eliminado: ID='+pm.collectionVariables.get('medicoPruebaId')); pm.collectionVariables.unset('medicoPruebaId'); pm.collectionVariables.unset('creacionPendiente'); }",
+                  "else { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar eliminación del médico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{ultimoMedicoEliminadoId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('ultimoMedicoEliminadoId')) bloquear('No se confirmó el DELETE propio.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404 esperado',()=>pm.response.to.have.status(404));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar médico inexistente",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{ultimoMedicoEliminadoId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('ultimoMedicoEliminadoId')) bloquear('No se confirmó el DELETE propio.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404 esperado',()=>pm.response.to.have.status(404));",
+                  "pm.test('Error JSON con mensaje',()=>pm.expect(pm.response.json().error).to.be.a('string').and.not.empty);",
+                  "pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "90 - Recuperación y limpieza",
+      "item": [
+        {
+          "name": "REC - Administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuarios_url}}/usuarios/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{{credenciales_login}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "",
+                  "pm.environment.unset('token_administrador');",
+                  "const email=pm.environment.get('admin_email'), password=pm.environment.get('admin_password');",
+                  "if(!email || !password) bloquear('Completar credenciales locales de Administrador.');",
+                  "pm.variables.set('credenciales_login',JSON.stringify({email,password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Login sin JSON: revisar Gateway y conectividad.'); }",
+                  "const valido=pm.response.code===200 && /^[^.]+\\.[^.]+\\.[^.]+$/.test(datos.token||'') && datos.usuario?.rol==='administrador';",
+                  "pm.test('JWT y rol administrador',()=>pm.expect(valido).to.eql(true));",
+                  "if(!valido) { pm.environment.unset('token_administrador'); detener('Login de Administrador fallido; revisar cuenta activa, contraseña y rol.'); }",
+                  "pm.environment.set('token_administrador',datos.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REC - Verificar médico propio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('propiedadVerificada');",
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code===404) { pm.test('El médico propio ya no existe',()=>pm.response.to.have.status(404));pm.collectionVariables.set('ultimoMedicoEliminadoId',pm.collectionVariables.get('medicoPruebaId'));pm.collectionVariables.unset('medicoPruebaId');pm.collectionVariables.unset('creacionPendiente');pm.execution.setNextRequest(null); }",
+                  "else { pm.test('HTTP 200 esperado',()=>pm.response.to.have.status(200));",
+                  "function detener(mensaje) { pm.execution.setNextRequest(null); throw new Error(mensaje); }",
+                  "let datos;try { datos=pm.response.json(); } catch { detener('Respuesta no JSON al verificar el médico propio.'); }",
+                  "const esPropio=pm.response.code===200 && String(datos.id)===String(pm.collectionVariables.get('medicoPruebaId')) && datos.registro_medico===pm.collectionVariables.get('registroPrueba') && datos.nombre===pm.collectionVariables.get('nombrePrueba') && datos.especialidad==='General' && ['Cali','Bogotá'].includes(datos.sede);",
+                  "pm.test('Registro propio y atributos verificados',()=>pm.expect(esPropio).to.eql(true));",
+                  "if(!esPropio) detener('El registro no coincide con la marca y atributos propios. No modificar ni borrar.');",
+                  "pm.collectionVariables.set('propiedadVerificada',String(datos.id)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REC - Eliminar médico propio",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{medicos_url}}/medicos/{{medicoPruebaId}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function bloquear(mensaje) { pm.execution.setNextRequest(null); pm.test('Preparación y destino seguros',()=>{throw new Error(mensaje);}); pm.execution.skipRequest(); }",
+                  "if(!pm.collectionVariables.get('medicoPruebaId')) bloquear('No hay médico propio. Revisar el caso de creación.');",
+                  "if(pm.collectionVariables.get('propiedadVerificada')!==String(pm.collectionVariables.get('medicoPruebaId'))) bloquear('Verificar primero la propiedad mediante GET.');",
+                  "pm.collectionVariables.unset('propiedadVerificada');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204 esperado',()=>pm.response.to.have.status(204));",
+                  "pm.test('Respuesta sin cuerpo',()=>pm.expect(pm.response.text()).to.eql(''));",
+                  "if(pm.response.code===204) { pm.collectionVariables.set('ultimoMedicoEliminadoId',pm.collectionVariables.get('medicoPruebaId')); console.log('Médico propio eliminado: ID='+pm.collectionVariables.get('medicoPruebaId')); pm.collectionVariables.unset('medicoPruebaId'); pm.collectionVariables.unset('creacionPendiente'); }",
+                  "else { pm.execution.setNextRequest(null); }",
+                  "pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

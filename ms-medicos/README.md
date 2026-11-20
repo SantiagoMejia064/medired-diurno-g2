@@ -221,7 +221,42 @@ Se documentaron pruebas para comprobar el contrato CRUD, validaciones, seguridad
 | POST como `admisiones` | `403` | Correcto |
 | POST como `administrador` | `201` | Correcto |
 
-La integración con `ms-citas` se verificó mediante Postman y mediante las peticiones recibidas por `ms-medicos`. La colección inicial se referencia en `docs/ms-medicos.postman_collection.json`.
+La integración con `ms-citas` se verificó mediante Postman y mediante las peticiones recibidas por `ms-medicos`. La colección inicial se conserva en [Collection ms-medicos](docs/Collection%20ms-medicos.postman_collection.json) como antecedente del Taller 2.
+
+### Paquete automático para el Taller 3
+
+Importar la [colección actual](docs/ms-medicos.postman_collection.json) y el
+[environment Gateway](docs/MediRed-Medicos-Gateway.postman_environment.json).
+También se incluye un [environment Local](docs/MediRed-Medicos-Local.postman_environment.json).
+Seguir [README-POSTMAN](docs/README-POSTMAN.md) para completar las tres cuentas
+del laboratorio, ejecutar las carpetas 00 a 04 y capturar el resumen.
+
+El paquete utiliza el mismo modelo de URLs, cuentas y JWT de Historias. Los
+logins guardan los tokens automáticamente; las pruebas generan su propio
+médico, comprueban CRUD, validaciones, lotes y permisos de los tres roles, y
+limpian el registro al terminar. La carpeta 90 recupera una ejecución interrumpida.
+No cambia cuentas de Usuarios ni utiliza IDs fijos para modificar médicos ajenos.
+
+Son 33 solicitudes normales configuradas: Gateway omite Health porque Apache
+no publica `/api/health`. Las comprobaciones locales con Newman pasaron 68
+aserciones en cada una de dos corridas de 32 solicitudes, con datos temporales
+en memoria y cero fallos. La guía documenta también la verificación de salud y
+recuperación. **No son resultados del Gateway ni de MySQL del laboratorio**.
+Las capturas del Run de Jean Carlo del 20/11/2026 a las 11:08:28 documentan,
+por separado, **62 aserciones aprobadas, cero fallidas y cero errores reportados**
+con `MediRed-Medicos-Gateway`. Muestran el CRUD del médico ID 21 y su limpieza
+con DELETE 204, GET 404 y repetición del DELETE 404. La solicitud de salud
+aparece sin respuesta y los logins no están visibles en esas capturas; no se
+presentan como comprobaciones acreditadas por ese Run. El detalle y las cinco
+capturas seleccionadas se describen en la guía de Postman y en el punto 4.4
+del informe grupal.
+
+Para revisar los archivos compartidos sin credenciales ni servicios, ejecutar
+`node ms-medicos/docs/verificar-postman.cjs` desde la raíz del repositorio.
+La [guía de Postman](docs/README-POSTMAN.md#verificación-de-archivos-y-ejecución-por-consola)
+incluye ejecución automática con Newman y recuperación mediante una copia de
+la colección con su estado. Cada integrante completa sus credenciales locales;
+los environments compartidos mantienen contraseñas y tokens vacíos.
 
 ## 6. Taller 3 — Despliegue en Ubuntu
 
