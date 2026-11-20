@@ -1,9 +1,9 @@
 
-// =====================================================================
-// CAPA DE PRESENTACIÓN (controlador)
-// Traduce HTTP <-> servicio.
-// Lee los datos de la petición y construye las respuestas HTTP.
-// =====================================================================
+ // =====================================================================
+ // CAPA DE PRESENTACIÓN (controlador)
+ // Traduce HTTP <-> servicio.
+ // Lee los datos de la petición y construye las respuestas HTTP.
+ // =====================================================================
 
 const service = require('../services/pacientes.service');
 const HttpError = require('../utils/http-error');
@@ -51,6 +51,9 @@ async function listar(req, res) {
 
   const pacientes = await service.listar(filtros);
 
+  // Guardar los IDs consultados para el registro HTTP
+  res.locals.idsPacientes = pacientes.map(p => p.id);
+
   return res.status(200).json(pacientes);
 }
 
@@ -62,6 +65,9 @@ async function listar(req, res) {
 async function obtener(req, res) {
   const paciente = await service.obtener(leerId(req));
 
+  // Guardar el ID consultado
+  res.locals.idsPacientes = [paciente.id];
+
   return res.status(200).json(paciente);
 }
 
@@ -72,6 +78,9 @@ async function obtener(req, res) {
 
 async function crear(req, res) {
   const nuevo = await service.crear(req.body);
+
+  // Guardar el ID del paciente creado
+  res.locals.pacienteId = nuevo.id;
 
   return res
     .status(201)
@@ -90,6 +99,9 @@ async function actualizar(req, res) {
     req.body
   );
 
+  // Guardar el ID del paciente actualizado
+  res.locals.pacienteId = actualizado.id;
+
   return res.status(200).json(actualizado);
 }
 
@@ -99,7 +111,12 @@ async function actualizar(req, res) {
 // =====================================================================
 
 async function eliminar(req, res) {
-  await service.eliminar(leerId(req));
+  const id = leerId(req);
+
+  await service.eliminar(id);
+
+  // Guardar el ID del paciente eliminado
+  res.locals.pacienteId = id;
 
   return res.status(204).end();
 }
