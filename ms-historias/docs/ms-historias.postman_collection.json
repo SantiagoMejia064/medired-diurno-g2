@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "ms-historias",
+    "name": "MediRed IPS - Historias - Pruebas normales",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "MediRed IPS · Taller 2. Ejecuta primero los inicios de sesión de Médico y Admisiones en ms-usuarios — Acceso para Historias con MediRed local seleccionado. Caso 03 no aplica. Los casos 23 y 24 requieren detener solo Médicos. Usa datos ficticios en el entorno local."
+    "description": "Colección normal de Steven para Taller 3. Seleccionar el entorno, completar las tres cuentas y ejecutar Run collection. Login, tokens, referencias, CRUD y limpieza son automáticos. Solo usa datos de laboratorio. Para reinicios y caída de proveedor utiliza la colección separada Reinicio y caída. No crea ni modifica cuentas de Usuarios."
   },
   "auth": {
     "type": "bearer",
@@ -16,7 +16,312 @@
   },
   "item": [
     {
-      "name": "00 - Estado del servicio",
+      "name": "00 - Acceso y preparación",
+      "item": [
+        {
+          "name": "Acceso - Administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuarios_url}}/usuarios/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{{credenciales_login}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset('token_administrador');",
+                  "const email = pm.variables.get('admin_email');",
+                  "const password = pm.variables.get('admin_password');",
+                  "if (!email || !password) {",
+                  "  pm.test('Credenciales configuradas', () => { throw new Error('Completa admin_email y admin_password en tu entorno local.'); });",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "}",
+                  "pm.variables.set('credenciales_login', JSON.stringify({email, password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "try { datos = pm.response.json(); } catch { datos = {}; }",
+                  "const valido = pm.response.code === 200 && typeof datos.token === 'string' && datos.token.length > 0 && datos.usuario?.rol === 'administrador';",
+                  "pm.test('Token y rol administrador', () => pm.expect(valido).to.equal(true));",
+                  "if (valido) pm.environment.set('token_administrador', datos.token);",
+                  "else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acceso - Médico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuarios_url}}/usuarios/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{{credenciales_login}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset('token_medico');",
+                  "const email = pm.variables.get('medico_email');",
+                  "const password = pm.variables.get('medico_password');",
+                  "if (!email || !password) {",
+                  "  pm.test('Credenciales configuradas', () => { throw new Error('Completa medico_email y medico_password en tu entorno local.'); });",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "}",
+                  "pm.variables.set('credenciales_login', JSON.stringify({email, password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "try { datos = pm.response.json(); } catch { datos = {}; }",
+                  "const valido = pm.response.code === 200 && typeof datos.token === 'string' && datos.token.length > 0 && datos.usuario?.rol === 'medico';",
+                  "pm.test('Token y rol medico', () => pm.expect(valido).to.equal(true));",
+                  "if (valido) pm.environment.set('token_medico', datos.token);",
+                  "else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Acceso - Admisiones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuarios_url}}/usuarios/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{{credenciales_login}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset('token_admisiones');",
+                  "const email = pm.variables.get('admisiones_email');",
+                  "const password = pm.variables.get('admisiones_password');",
+                  "if (!email || !password) {",
+                  "  pm.test('Credenciales configuradas', () => { throw new Error('Completa admisiones_email y admisiones_password en tu entorno local.'); });",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "}",
+                  "pm.variables.set('credenciales_login', JSON.stringify({email, password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "try { datos = pm.response.json(); } catch { datos = {}; }",
+                  "const valido = pm.response.code === 200 && typeof datos.token === 'string' && datos.token.length > 0 && datos.usuario?.rol === 'admisiones';",
+                  "pm.test('Token y rol admisiones', () => pm.expect(valido).to.equal(true));",
+                  "if (valido) pm.environment.set('token_admisiones', datos.token);",
+                  "else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preparación - Consultar pacientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{pacientes_url}}/pacientes"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('paciente_id');",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const filas = pm.response.json();",
+                  "const valido = pm.response.code === 200 && Array.isArray(filas) && filas.length > 0 && filas.every(x => Number.isInteger(x.id) && x.id > 0);",
+                  "pm.test('Proveedor con registros utilizables', () => pm.expect(valido).to.equal(true));",
+                  "if (valido) {",
+                  "  pm.collectionVariables.set('paciente_id', String(filas[0].id));",
+                  "  pm.collectionVariables.set('max_pacientes', String(Math.max(...filas.map(x => x.id))));",
+                  "} else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preparación - Consultar medicos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{medicos_url}}/medicos"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('medico_id');",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const filas = pm.response.json();",
+                  "const valido = pm.response.code === 200 && Array.isArray(filas) && filas.length > 0 && filas.every(x => Number.isInteger(x.id) && x.id > 0);",
+                  "pm.test('Proveedor con registros utilizables', () => pm.expect(valido).to.equal(true));",
+                  "if (valido) {",
+                  "  pm.collectionVariables.set('medico_id', String(filas[0].id));",
+                  "  pm.collectionVariables.set('max_medicos', String(Math.max(...filas.map(x => x.id))));",
+                  "} else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preparación - Consultar historias",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const filas = pm.response.json();",
+                  "const valido = pm.response.code === 200 && Array.isArray(filas) && filas.every(x => Number.isInteger(x.id) && x.id > 0);",
+                  "pm.test('Listado utilizable', () => pm.expect(valido).to.equal(true));",
+                  "if (valido) {",
+                  "  const maximo = Math.max(0, ...filas.map(x => x.id), Number(pm.collectionVariables.get('max_pacientes')), Number(pm.collectionVariables.get('max_medicos')));",
+                  "  pm.collectionVariables.set('id_inexistente', String(maximo + 1000));",
+                  "} else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preparación - Crear historia base",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} base\",\n  \"diagnostico\": \"Diagnóstico ficticio Taller 3\",\n  \"tratamiento\": \"Seguimiento ficticio Taller 3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('historia_existente_id', String(pm.response.json().id));",
+                  "else pm.execution.setNextRequest(null);",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('id_inexistente', String(Math.max(Number(pm.collectionVariables.get('id_inexistente')), pm.response.json().id + 1000)));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Salud opcional",
       "item": [
         {
           "name": "Estado del servicio",
@@ -41,7 +346,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{historias_url}}/health",
+            "url": "{{health_url}}",
             "description": "Comprueba que Historias responde.",
             "auth": {
               "type": "noauth"
@@ -52,8 +357,7 @@
       ]
     },
     {
-      "name": "01 - CRUD y filtro",
-      "description": "Ejecuta del 01 al 11. Haz la comprobación de persistencia antes del 12. El caso 03 se anota como No aplica en el informe.",
+      "name": "02 - CRUD y filtro",
       "item": [
         {
           "name": "01 - Listar historias",
@@ -94,7 +398,7 @@
                   "});",
                   "pm.test(\"El filtro coincide con el paciente\", function () {",
                   "  const historias = pm.response.json();",
-                  "  const id = Number(pm.environment.get('paciente_id'));",
+                  "  const id = Number(pm.collectionVariables.get('paciente_id'));",
                   "  pm.expect(historias).to.be.an('array').that.is.not.empty;",
                   "  pm.expect(historias.every(historia => historia.paciente_id === id)).to.be.true;",
                   "});"
@@ -122,7 +426,7 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "pm.test(\"Identificador esperado\", function () {",
-                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('historia_existente_id')));",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.collectionVariables.get('historia_existente_id')));",
                   "});"
                 ]
               }
@@ -207,7 +511,7 @@
                   "if (pm.response.code === 201) {",
                   "  const id = pm.response.json().id;",
                   "  if (Number.isInteger(id) && id > 0) {",
-                  "    pm.environment.set('caso_07_id', String(id));",
+                  "    pm.collectionVariables.set('caso_07_id', String(id));",
                   "  }",
                   "}"
                 ]
@@ -219,15 +523,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
-            "description": "Crea el registro ficticio del CRUD y guarda su ID automáticamente en caso_07_id. Usa el mismo ID para actualizar, comprobar persistencia y eliminar. Captura el resultado.",
+            "description": "Crea el registro del CRUD. Su ID se calcula automáticamente y se conserva para PUT y DELETE.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - atención ficticia\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} atención ficticia\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -261,15 +564,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
             "description": "Omite el diagnóstico en el cuerpo.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - falta diagnóstico\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} falta diagnóstico\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -302,15 +604,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
             "description": "Comprueba la regla de fecha. Captura el resultado.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"2099-01-01\",\n  \"motivo_consulta\": \"Taller 2 - fecha futura\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"2099-01-01\",\n  \"motivo_consulta\": \"{{marca_prueba}} fecha futura\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -332,10 +633,10 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "pm.test(\"Identificador esperado\", function () {",
-                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('caso_07_id')));",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.collectionVariables.get('caso_07_id')));",
                   "});",
                   "pm.test(\"Motivo actualizado\", function () {",
-                  "  pm.expect(pm.response.json().motivo_consulta).to.equal(\"Taller 2 - atención ficticia actualizada\");",
+                  "  pm.expect(pm.response.json().motivo_consulta).to.equal(pm.collectionVariables.get('marca_prueba') + ' CRUD actualizado');",
                   "});"
                 ]
               }
@@ -346,15 +647,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias/{{caso_07_id}}",
             "description": "Usa el ID del caso 07 y cambia el motivo.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - atención ficticia actualizada\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} CRUD actualizado\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -387,50 +687,20 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias/{{id_inexistente}}",
             "description": "Envía referencias válidas con un ID de historia inexistente.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - actualizar historia inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} actualizar historia inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             }
-          },
-          "response": []
-        },
-        {
-          "name": "Persistencia - Consultar después de reiniciar Historias",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"HTTP 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Identificador esperado\", function () {",
-                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('caso_07_id')));",
-                  "});",
-                  "pm.test(\"Motivo actualizado\", function () {",
-                  "  pm.expect(pm.response.json().motivo_consulta).to.equal(\"Taller 2 - atención ficticia actualizada\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{historias_url}}/historias/{{caso_07_id}}",
-            "description": "Ejecuta después del caso 10. Reinicia solo ms-historias, ejecuta este GET y consulta el mismo ID en Workbench. Guarda ambas capturas antes del caso 12."
           },
           "response": []
         },
@@ -489,8 +759,7 @@
       ]
     },
     {
-      "name": "02 - Seguridad",
-      "description": "Captura los casos 14 a 18 con el código visible. Médico puede escribir y Admisiones solo consulta.",
+      "name": "03 - Seguridad",
       "item": [
         {
           "name": "14 - Listar sin token",
@@ -616,8 +885,7 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
@@ -634,7 +902,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - permisos de Admisiones\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} permisos de Admisiones\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -669,15 +937,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
             "description": "Comprueba que un médico puede crear historias.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - permisos de Médico\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} permisos de Médico\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -690,8 +957,179 @@
       ]
     },
     {
-      "name": "03 - Relaciones y caída",
-      "description": "Captura los casos 19 a 24. Para 22 registra el tráfico en las terminales. Para 23 y 24 detén solo Médicos y vuelve a iniciarlo al finalizar.",
+      "name": "03b - Permisos de Administrador",
+      "description": "CRUD de una historia propia con el token del rol administrador. El ID se obtiene del POST y la limpieza general conserva cualquier ID que quede pendiente.",
+      "item": [
+        {
+          "name": "Admin - Crear historia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('admin_historia_id');",
+                  "pm.test('Administrador puede crear: HTTP 201', () => pm.response.to.have.status(201));",
+                  "const datos = pm.response.json();",
+                  "const valido = pm.response.code === 201 && Number.isInteger(datos.id) && datos.id > 0;",
+                  "pm.test('ID propio y Location', () => {",
+                  "  pm.expect(valido).to.equal(true);",
+                  "  pm.expect(pm.response.headers.get('Location')).to.equal('/historias/' + datos.id);",
+                  "});",
+                  "if (valido) pm.collectionVariables.set('admin_historia_id', String(datos.id));",
+                  "else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{historias_url}}/historias",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_administrador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} administrador\",\n  \"diagnostico\": \"Diagnóstico ficticio Taller 3\",\n  \"tratamiento\": \"Seguimiento ficticio Taller 3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Admin - Consultar historia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Administrador puede consultar: HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ID del registro creado por Administrador', () => pm.expect(pm.response.json().id).to.equal(Number(pm.collectionVariables.get('admin_historia_id'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{admin_historia_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_administrador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Admin - Actualizar historia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Administrador puede actualizar: HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ID y motivo actualizado', () => {",
+                  "  const datos = pm.response.json();",
+                  "  pm.expect(datos.id).to.equal(Number(pm.collectionVariables.get('admin_historia_id')));",
+                  "  pm.expect(datos.motivo_consulta).to.equal(pm.collectionVariables.get('marca_prueba') + ' administrador actualizado');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{historias_url}}/historias/{{admin_historia_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_administrador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} administrador actualizado\",\n  \"diagnostico\": \"Diagnóstico ficticio Taller 3\",\n  \"tratamiento\": \"Seguimiento ficticio Taller 3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Admin - Eliminar historia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Administrador puede eliminar: HTTP 204', () => {",
+                  "  pm.response.to.have.status(204);",
+                  "  pm.expect(pm.response.text()).to.equal('');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{admin_historia_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_administrador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Relaciones",
       "item": [
         {
           "name": "19 - Crear con paciente y médico válidos",
@@ -720,7 +1158,7 @@
                   "if (pm.response.code === 201) {",
                   "  const id = pm.response.json().id;",
                   "  if (Number.isInteger(id) && id > 0) {",
-                  "    pm.environment.set('caso_19_id', String(id));",
+                  "    pm.collectionVariables.set('caso_19_id', String(id));",
                   "  }",
                   "}"
                 ]
@@ -732,15 +1170,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
             "description": "La respuesta debe incluir ambos objetos relacionados. Guarda automáticamente el ID para el caso 21.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - relaciones válidas\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} relaciones válidas\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -773,15 +1210,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
             "description": "Usa paciente inexistente y médico válido.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{id_inexistente}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - paciente inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{id_inexistente}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} paciente inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -814,15 +1250,14 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "url": "{{historias_url}}/historias",
             "description": "Usa paciente válido y médico inexistente.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{id_inexistente}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - médico inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
+              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{id_inexistente}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"{{marca_prueba}} médico inexistente\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -844,7 +1279,7 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "pm.test(\"Identificador esperado\", function () {",
-                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get('caso_19_id')));",
+                  "  pm.expect(pm.response.json().id).to.equal(Number(pm.collectionVariables.get('caso_19_id')));",
                   "});",
                   "pm.test(\"Paciente y médico relacionados\", function () {",
                   "  const historia = pm.response.json();",
@@ -888,81 +1323,284 @@
             "method": "GET",
             "header": [],
             "url": "{{historias_url}}/historias",
-            "description": "Envía una vez con todos los servicios arriba. Captura el 200 junto con una línea GET /pacientes?ids=… y una línea GET /medicos?ids=… en las terminales receptoras. Revisa los logs manualmente."
-          },
-          "response": []
-        },
-        {
-          "name": "23 - Listar con Médicos detenido",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"HTTP 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Listado parcial con aviso de Médicos\", function () {",
-                  "  const historias = pm.response.json();",
-                  "  pm.expect(historias).to.be.an('array').that.is.not.empty;",
-                  "  pm.expect(historias.every(historia => historia.medico === null && historia.aviso.includes('ms-medicos no está disponible'))).to.be.true;",
-                  "  pm.expect(historias.some(historia => historia.paciente !== null)).to.be.true;",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{historias_url}}/historias",
-            "description": "Detén solo Médicos. La captura debe mostrar medico: null y aviso."
-          },
-          "response": []
-        },
-        {
-          "name": "24 - Crear con Médicos detenido",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"HTTP 503\", function () {",
-                  "  pm.response.to.have.status(503);",
-                  "});",
-                  "pm.test(\"Mensaje de error esperado\", function () {",
-                  "  pm.expect(pm.response.json().error).to.include(\"ms-medicos no está disponible\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{historias_url}}/historias",
-            "description": "Mantén Médicos detenido y Pacientes activo. Guarda la captura y luego reinicia Médicos.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paciente_id\": {{paciente_id}},\n  \"medico_id\": {{medico_id}},\n  \"fecha\": \"{{fecha_valida}}\",\n  \"motivo_consulta\": \"Taller 2 - Médicos detenido\",\n  \"diagnostico\": \"Diagnóstico ficticio para el Taller 2.\",\n  \"tratamiento\": \"Seguimiento ficticio para el Taller 2.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Comprueba el listado. La cantidad de consultas por lote se observa en journalctl de los proveedores; una respuesta JSON por sí sola no demuestra el número de llamadas."
           },
           "response": []
         }
       ]
+    },
+    {
+      "name": "90 - Limpieza de registros propios",
+      "item": [
+        {
+          "name": "90 - Consultar registro propio antes de borrar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{limpieza_id}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id = Number(pm.variables.get('limpieza_id'));",
+                  "pm.collectionVariables.unset('borrado_verificado');",
+                  "if (pm.response.code === 404) {",
+                  "  pm.test('Registro propio ya eliminado', () => pm.response.to.have.status(404));",
+                  "  const ids = JSON.parse(pm.collectionVariables.get('ids_propios') || '[]').filter(x => x !== id);",
+                  "  pm.collectionVariables.set('ids_propios', JSON.stringify(ids));",
+                  "  pm.execution.setNextRequest(ids.length ? pm.info.requestId : null);",
+                  "} else {",
+                  "  const datos = pm.response.json();",
+                  "  const valido = pm.response.code === 200 && datos.id === id && String(datos.motivo_consulta).startsWith(pm.collectionVariables.get('marca_prueba') + ' ');",
+                  "  pm.test('Identidad y marca del registro propio', () => pm.expect(valido).to.equal(true));",
+                  "  if (valido) pm.collectionVariables.set('borrado_verificado', String(id));",
+                  "  else pm.execution.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "91 - Eliminar registro propio verificado",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{historias_url}}/historias/{{limpieza_id}}"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204 y cuerpo vacío', () => {",
+                  "  pm.response.to.have.status(204);",
+                  "  pm.expect(pm.response.text()).to.equal('');",
+                  "});",
+                  "if (pm.response.code === 204 && JSON.parse(pm.collectionVariables.get('ids_propios') || '[]').length) pm.execution.setNextRequest('90 - Consultar registro propio antes de borrar');",
+                  "else pm.execution.setNextRequest(null);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "historias_url",
+      "value": "http://app.medired.com/api",
+      "type": "string"
+    },
+    {
+      "key": "usuarios_url",
+      "value": "http://app.medired.com/api",
+      "type": "string"
+    },
+    {
+      "key": "pacientes_url",
+      "value": "http://app.medired.com/api",
+      "type": "string"
+    },
+    {
+      "key": "medicos_url",
+      "value": "http://app.medired.com/api",
+      "type": "string"
+    },
+    {
+      "key": "health_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "medico_email",
+      "value": "medico.prueba@medired.test",
+      "type": "string"
+    },
+    {
+      "key": "medico_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admisiones_email",
+      "value": "admisiones.prueba@medired.test",
+      "type": "string"
+    },
+    {
+      "key": "admisiones_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paciente_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "medico_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_inexistente",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "historia_existente_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "caso_07_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "caso_19_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "persistencia_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fallo_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "marca_prueba",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "origen_prueba",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ids_propios",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "borrado_verificado",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@empresa.com",
+      "type": "string"
+    },
+    {
+      "key": "admin_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_historia_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// token_admisiones: se guarda automáticamente en el entorno seleccionado.",
+          "// token_medico: se guarda automáticamente en el entorno seleccionado.",
+          "// token_administrador: se guarda automáticamente en el entorno seleccionado.",
+          "// Los valores calculados pertenecen a esta colección, no a IDs de otro entorno.",
+          "const calculadas = ['admin_historia_id','paciente_id','medico_id','id_inexistente','historia_existente_id','caso_07_id','caso_19_id','persistencia_id','fallo_id','marca_prueba','origen_prueba','ids_propios','borrado_verificado'];",
+          "calculadas.forEach(k => pm.variables.set(k, pm.collectionVariables.get(k) || ''));",
+          "['token_administrador','token_medico','token_admisiones'].forEach(k => pm.variables.set(k, pm.environment.get(k) || ''));",
+          "// La fecha se calcula dentro del script; no requiere configuración.",
+          "pm.variables.set('fecha_valida', new Date(Date.now() - 86400000).toISOString().slice(0,10));",
+          "const nombre = pm.info.requestName;",
+          "const login = nombre.startsWith('Acceso -');",
+          "const manualP = nombre.startsWith('Persistencia -');",
+          "const manualM = nombre.startsWith('Fallo -') || nombre.startsWith('23 -') || nombre.startsWith('24 -');",
+          "const limpieza = nombre.startsWith('90 -') || nombre.startsWith('91 -');",
+          "function bloquear(mensaje) {",
+          "  pm.test('Preparación requerida', () => { throw new Error(mensaje); });",
+          "  pm.execution.setNextRequest(null);",
+          "  pm.execution.skipRequest();",
+          "}",
+          "if (nombre === 'Estado del servicio' && !pm.variables.get('health_url')) pm.execution.skipRequest();",
+          "const ids = JSON.parse(pm.collectionVariables.get('ids_propios') || '[]');",
+          "const origen = String(pm.variables.get('historias_url')).replace(/\\/$/, '');",
+          "if (ids.length && pm.collectionVariables.get('origen_prueba') !== origen) bloquear('Hay registros pendientes de otro origen. Usa el entorno anterior y ejecuta limpieza antes de cambiar URL.');",
+          "if (!login && nombre !== 'Estado del servicio' && !pm.environment.get('token_medico')) bloquear('Ejecuta primero Acceso - Médico.');",
+          "if ((nombre.startsWith('16 -') || nombre.startsWith('17 -')) && !pm.environment.get('token_admisiones')) bloquear('Ejecuta primero Acceso - Admisiones.');",
+          "if (nombre.startsWith('Admin -') && !pm.environment.get('token_administrador')) bloquear('Ejecuta primero Acceso - Administrador.');",
+          "if (limpieza) {",
+          "  if (!ids.length) pm.execution.skipRequest();",
+          "  pm.variables.set('limpieza_id', String(ids[ids.length-1]));",
+          "  if (nombre.startsWith('91 -') && pm.collectionVariables.get('borrado_verificado') !== String(ids[ids.length-1])) bloquear('Ejecuta primero 90 - Consultar registro propio antes de borrar.');",
+          "}",
+          "if (nombre === 'Preparación - Crear historia base') {",
+          "  if (ids.length) bloquear('Quedaron registros de una ejecución anterior. Ejecuta la carpeta 90 - Limpieza y vuelve a comenzar.');",
+          "}",
+          "if (nombre === 'Preparación - Crear historia base' || nombre === 'Persistencia - Crear registro' || nombre === 'Fallo - Crear registro') {",
+          "  if (nombre !== 'Preparación - Crear historia base' && ids.length) bloquear('Limpia la ejecución anterior antes de preparar la prueba manual.');",
+          "  if (!pm.collectionVariables.get('paciente_id') || !pm.collectionVariables.get('medico_id')) bloquear('Ejecuta la preparación de pacientes y médicos con ambos proveedores activos.');",
+          "  const marca = 'T3-Steven-' + Date.now() + '-' + Math.random().toString(16).slice(2,8);",
+          "  pm.collectionVariables.set('marca_prueba', marca);",
+          "  pm.variables.set('marca_prueba', marca);",
+          "  pm.collectionVariables.set('origen_prueba', origen);",
+          "}",
+          "// Evita actuar sobre IDs suministrados a mano en un entorno.",
+          "let destino = '';",
+          "if (nombre.startsWith('10 -') || nombre.startsWith('12 -')) destino = pm.collectionVariables.get('caso_07_id');",
+          "if (nombre.startsWith('Persistencia -') && nombre !== 'Persistencia - Crear registro') destino = pm.collectionVariables.get('persistencia_id');",
+          "if (nombre.startsWith('Fallo - Limpiar')) destino = pm.collectionVariables.get('fallo_id');",
+          "if (nombre.startsWith('Admin -') && pm.request.method !== 'POST') {",
+          "  destino = pm.collectionVariables.get('admin_historia_id');",
+          "  if (!destino) bloquear('Ejecuta primero Admin - Crear historia.');",
+          "}",
+          "if (destino && !ids.includes(Number(destino))) bloquear('El ID no pertenece a registros creados por esta ejecución.');",
+          "if ((manualP || manualM) && pm.request.method === 'DELETE' && pm.collectionVariables.get('borrado_verificado') !== String(destino)) bloquear('Ejecuta primero la verificación de limpieza de esta prueba manual.');",
+          "if ((nombre.startsWith('10 -') || nombre.startsWith('12 -') || (manualP && nombre !== 'Persistencia - Crear registro') || nombre.startsWith('Fallo - Limpiar')) && !destino) bloquear('Falta crear el registro de prueba correspondiente.');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Conserva IDs creados incluso si un caso negativo respondiera 201 por error.",
+          "if (pm.request.method === 'POST' && !pm.info.requestName.startsWith('Acceso -') && pm.response.code === 201) {",
+          "  const nuevo = pm.response.json();",
+          "  if (Number.isInteger(nuevo.id) && nuevo.id > 0) {",
+          "    const ids = JSON.parse(pm.collectionVariables.get('ids_propios') || '[]');",
+          "    if (!ids.includes(nuevo.id)) ids.push(nuevo.id);",
+          "    pm.collectionVariables.set('ids_propios', JSON.stringify(ids));",
+          "  }",
+          "}",
+          "if (pm.request.method === 'DELETE' && pm.response.code === 204) {",
+          "  const url = pm.variables.replaceIn(pm.request.url.toString());",
+          "  const id = Number(url.split('/').pop());",
+          "  const ids = JSON.parse(pm.collectionVariables.get('ids_propios') || '[]');",
+          "  pm.collectionVariables.set('ids_propios', JSON.stringify(ids.filter(x => x !== id)));",
+          "  pm.collectionVariables.unset('borrado_verificado');",
+          "}"
+        ]
+      }
     }
   ]
 }
