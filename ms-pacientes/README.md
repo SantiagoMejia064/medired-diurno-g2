@@ -5,6 +5,14 @@ Microservicio REST para la gestión de pacientes de MediRed IPS, desarrollado co
 
 Permite registrar, consultar, actualizar y eliminar pacientes. También ofrece consultas filtradas por EPS y consultas por lotes mediante identificadores. El acceso a los endpoints está protegido mediante autenticación JWT y autorización por roles.
 
+Responsable del microservicio — Valentina Ochoa Hernández.
+
+- [Contrato REST y permisos](#contrato-rest).
+- [Seguridad JWT](#autenticación-y-autorización).
+- [Regla de documento único](#regla-de-negocio-documento-único).
+- [Relaciones y tabla Me consultan](#me-consultan).
+- [Colección, entorno y ejecución de Postman](#documentación-y-pruebas).
+
 ## Instalación y ejecución
 
 Desde la carpeta `ms-pacientes`, instalar las dependencias:
@@ -257,12 +265,18 @@ El rol contenido en el token determina las operaciones permitidas.
 
 El microservicio `ms-pacientes` proporciona información a `ms-citas` y `ms-historias`, permitiendo que estos servicios consulten los pacientes relacionados con sus registros.
 
-Ambos pueden utilizar el endpoint `GET /pacientes?ids=` para recuperar varios pacientes en una sola solicitud HTTP, evitando realizar una petición individual por cada identificador.
+Ambos utilizan el endpoint `GET /pacientes?ids=` para recuperar los pacientes relacionados por lotes. Las llamadas internas usan `PACIENTES_URL`, configurada en servidor2 como `http://127.0.0.1:3002`, y envían el JWT en `Authorization: Bearer <token>`.
 
 | Microservicio que me consulta | Endpoint utilizado | Finalidad |
 |---|---|---|
 | `ms-citas` | `GET /pacientes?ids=1,3` | Consultar los pacientes asociados a las citas médicas y obtener su información mediante los identificadores registrados. |
 | `ms-historias` | `GET /pacientes?ids=1,3` | Consultar los pacientes asociados a las historias clínicas y obtener sus datos mediante sus identificadores. |
+
+Los identificadores de la tabla son ejemplos. Cada consumidor reúne los IDs de pacientes de su listado y solicita sus datos por lote para componer la respuesta.
+
+### Servicios que consulto
+
+`ms-pacientes` resuelve su CRUD y sus filtros con `pacientes_db`. Verifica localmente el JWT emitido por `ms-usuarios`. Sus operaciones actuales se ejecutan con su propia base de datos y la clave compartida del grupo.
 
 #### Consulta desde ms-citas
 
@@ -362,6 +376,14 @@ Se registra una sola petición:
 
 Este comportamiento permite comprobar que la consulta por lotes funciona correctamente y evita realizar múltiples solicitudes individuales.
 
+Para comprobar la integración en servidor2, abre el registro en una terminal.
+
+```bash
+sudo journalctl -u ms-pacientes -f
+```
+
+Actualiza una sola vez el listado de Citas con pacientes asociados y comprueba la línea `GET /pacientes?ids=... → 200`. Repite con Historias. Captura el listado y las líneas de su misma ejecución para evidenciar una consulta por lote a Pacientes por cada listado. Los IDs consultados aparecen en el registro del servicio. Sal del seguimiento con Ctrl+C.
+
 ### Independencia de las bases de datos
 
 Cada microservicio mantiene su propia base de datos.
@@ -422,17 +444,11 @@ La carpeta `docs/` contiene la documentación complementaria del microservicio y
 
 ### Contrato REST
 
-Archivo:
-
-`docs/contrato-rest.md`
-
-Contiene la descripción de los endpoints, métodos HTTP, parámetros, cuerpos de solicitud, respuestas, códigos de estado, validaciones y permisos.
+El [contrato REST de este README](#contrato-rest) describe los endpoints y filtros. Las secciones de ejemplos, seguridad, validaciones y códigos HTTP completan los cuerpos de solicitud, respuestas y permisos.
 
 ### Colección de Postman
 
-Archivo:
-
-`docs/ms-pacientes.postman_collection.json`
+Importa la [colección automática de Pacientes](docs/ms-pacientes.postman_collection.json).
 
 La colección permite ejecutar pruebas sobre los endpoints del microservicio, incluyendo:
 
@@ -447,17 +463,13 @@ La colección permite ejecutar pruebas sobre los endpoints del microservicio, in
 - Consulta de pacientes inexistentes.
 - Validación de autenticación JWT y permisos.
 
-Para utilizarla, importar el archivo JSON en Postman y configurar la URL base y un token JWT válido.
+Para ejecutarla por el gateway, importa la colección y el entorno
+[`MediRed Pacientes Gateway`](docs/MediRed-Pacientes-Gateway.postman_environment.json).
+Completa las credenciales locales de Administrador, Admisiones y Médico.
+Los logins de la colección obtienen y guardan un JWT por rol durante el run. La
+[guía de Postman](docs/README-POSTMAN.md) detalla la ejecución y las capturas del Taller 3.
 
-URL base:
-
-`http://localhost:3002`
-
-Encabezado de autenticación:
-
-```http
-Authorization: Bearer <token>
-```
+Ejecuta las 19 solicitudes en orden con una iteración. La colección incluye 38 comprobaciones por corrida completa y verifica los permisos de los tres roles. Genera un documento de prueba, guarda el ID creado y elimina ese paciente al terminar. El entorno exportado contiene campos para las cuentas y los tokens de cada rol. Completa los correos y contraseñas en los valores locales de Postman. Los logins llenan los tokens automáticamente.
 
 ## Pruebas realizadas
 
@@ -495,8 +507,9 @@ ms-pacientes/
 │   └── schema.sql
 │
 ├── docs/
-│   ├── contrato-rest.md
-│   └── ms-pacientes.postman_collection.json
+│   ├── README-POSTMAN.md
+│   ├── ms-pacientes.postman_collection.json
+│   └── MediRed-Pacientes-Gateway.postman_environment.json
 │
 ├── src/
 │   ├── controllers/

@@ -1,0 +1,934 @@
+{
+  "info": {
+    "name": "MediRed IPS - ms-pacientes - Taller 3",
+    "description": "Pruebas de Pacientes por el API Gateway. Importa y selecciona el entorno MediRed Pacientes Gateway. Ejecuta en orden con una iteración.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token_administrador}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Login administrador",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('token_administrador', '');",
+              "const email = pm.environment.get('admin_email') || '';",
+              "const password = pm.environment.get('admin_password') || '';",
+              "pm.variables.set('pacientesLoginBody', JSON.stringify({ email, password }));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "    const { token, usuario } = pm.response.json();",
+              "    const rolValido = usuario?.rol === 'administrador';",
+              "    pm.test('JWT recibido para administrador', function () {",
+              "        pm.expect(token).to.be.a('string').and.not.empty;",
+              "        pm.expect(rolValido).to.equal(true);",
+              "    });",
+              "    if (rolValido && typeof token === 'string' && token) pm.environment.set('token_administrador', token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/usuarios/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{{pacientesLoginBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "02 - Listar sin token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Respuesta JSON con mensaje de error', function () {",
+              "    pm.expect(pm.response.json().error).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [],
+        "url": "{{baseUrl}}/pacientes"
+      }
+    },
+    {
+      "name": "03 - Login admisiones",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('token_admisiones', '');",
+              "const email = pm.environment.get('admisiones_email') || '';",
+              "const password = pm.environment.get('admisiones_password') || '';",
+              "pm.variables.set('pacientesLoginBody', JSON.stringify({ email, password }));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "    const { token, usuario } = pm.response.json();",
+              "    const rolValido = usuario?.rol === 'admisiones';",
+              "    pm.test('JWT recibido para admisiones', function () {",
+              "        pm.expect(token).to.be.a('string').and.not.empty;",
+              "        pm.expect(rolValido).to.equal(true);",
+              "    });",
+              "    if (rolValido && typeof token === 'string' && token) pm.environment.set('token_admisiones', token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/usuarios/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{{pacientesLoginBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "04 - Listar pacientes como admisiones",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_admisiones')) {",
+              "    console.error('Falta token_admisiones. Revisa el login de admisiones.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('La respuesta es un arreglo', function () {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_admisiones}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - Intentar crear paciente como admisiones",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_admisiones')) {",
+              "    console.error('Falta token_admisiones. Revisa el login de admisiones.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', function () {",
+              "    pm.response.to.have.status(403);",
+              "});",
+              "pm.test('Respuesta JSON con mensaje de error', function () {",
+              "    pm.expect(pm.response.json().error).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_admisiones}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/pacientes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Paciente sintético Taller 3\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "06 - Login medico",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('token_medico', '');",
+              "const email = pm.environment.get('medico_email') || '';",
+              "const password = pm.environment.get('medico_password') || '';",
+              "pm.variables.set('pacientesLoginBody', JSON.stringify({ email, password }));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "    const { token, usuario } = pm.response.json();",
+              "    const rolValido = usuario?.rol === 'medico';",
+              "    pm.test('JWT recibido para medico', function () {",
+              "        pm.expect(token).to.be.a('string').and.not.empty;",
+              "        pm.expect(rolValido).to.equal(true);",
+              "    });",
+              "    if (rolValido && typeof token === 'string' && token) pm.environment.set('token_medico', token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/usuarios/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{{pacientesLoginBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "07 - Listar pacientes como medico",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_medico')) {",
+              "    console.error('Falta token_medico. Revisa el login de medico.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('La respuesta es un arreglo', function () {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_medico}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Intentar crear paciente como medico",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_medico')) {",
+              "    console.error('Falta token_medico. Revisa el login de medico.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', function () {",
+              "    pm.response.to.have.status(403);",
+              "});",
+              "pm.test('Respuesta JSON con mensaje de error', function () {",
+              "    pm.expect(pm.response.json().error).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_medico}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/pacientes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Paciente sintético Taller 3\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "09 - Crear paciente con datos inválidos",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "pm.test('Respuesta JSON con mensaje de error', function () {",
+              "    pm.expect(pm.response.json().error).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/pacientes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Paciente sintético Taller 3\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "10 - Crear paciente de prueba",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.unset('pacienteIdPrueba');",
+              "pm.collectionVariables.set('documentoPrueba', String(9000000000 + Math.floor(Math.random() * 1000000000)));",
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "if (pm.response.code === 201) {",
+              "    const paciente = pm.response.json();",
+              "    const idValido = Number.isInteger(paciente.id) && paciente.id > 0;",
+              "    const documentoCoincide = paciente.documento === pm.collectionVariables.get('documentoPrueba');",
+              "    if (idValido && documentoCoincide) pm.collectionVariables.set('pacienteIdPrueba', paciente.id);",
+              "    pm.test('Paciente sintético creado', function () {",
+              "        pm.expect(idValido && documentoCoincide).to.equal(true);",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/pacientes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Paciente sintético Taller 3\",\n  \"documento\": \"{{documentoPrueba}}\",\n  \"fecha_nacimiento\": \"1990-01-15\",\n  \"eps\": \"EPS Prueba Taller 3\",\n  \"telefono\": \"3000000000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11 - Listar pacientes",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('La respuesta es un arreglo', function () {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes"
+      }
+    },
+    {
+      "name": "12 - Consultar paciente por ID",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}",
+              "if (!pm.collectionVariables.get('pacienteIdPrueba')) {",
+              "    console.error('Falta pacienteIdPrueba. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Devuelve el paciente creado', function () {",
+              "    pm.expect(pm.response.json().id).to.equal(Number(pm.collectionVariables.get('pacienteIdPrueba')));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes/{{pacienteIdPrueba}}"
+      }
+    },
+    {
+      "name": "13 - Filtrar pacientes por EPS",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}",
+              "if (!pm.collectionVariables.get('pacienteIdPrueba')) {",
+              "    console.error('Falta pacienteIdPrueba. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('La EPS filtra e incluye al paciente creado', function () {",
+              "    const pacientes = pm.response.json();",
+              "    pm.expect(pacientes.every(p => p.eps === 'EPS Prueba Taller 3')).to.equal(true);",
+              "    pm.expect(pacientes.map(p => p.id)).to.include(Number(pm.collectionVariables.get('pacienteIdPrueba')));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes?eps=EPS%20Prueba%20Taller%203"
+      }
+    },
+    {
+      "name": "14 - Consultar pacientes por lotes",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}",
+              "if (!pm.collectionVariables.get('pacienteIdPrueba')) {",
+              "    console.error('Falta pacienteIdPrueba. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('El lote incluye al paciente y solo devuelve IDs solicitados', function () {",
+              "    const ids = pm.response.json().map(p => p.id);",
+              "    const id = Number(pm.collectionVariables.get('pacienteIdPrueba'));",
+              "    pm.expect(ids).to.include(id);",
+              "    pm.expect(ids.every(valor => valor === id || valor === 2147483647)).to.equal(true);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes?ids={{pacienteIdPrueba}},2147483647"
+      }
+    },
+    {
+      "name": "15 - Rechazar IDs de lote inválidos",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "pm.test('Respuesta JSON con mensaje de error', function () {",
+              "    pm.expect(pm.response.json().error).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes?ids=abc"
+      }
+    },
+    {
+      "name": "16 - Rechazar documento duplicado",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}",
+              "if (!pm.collectionVariables.get('pacienteIdPrueba')) {",
+              "    console.error('Falta pacienteIdPrueba. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "pm.test('Respuesta JSON con mensaje de error', function () {",
+              "    pm.expect(pm.response.json().error).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/pacientes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Paciente sintético Taller 3\",\n  \"documento\": \"{{documentoPrueba}}\",\n  \"fecha_nacimiento\": \"1990-01-15\",\n  \"eps\": \"EPS Prueba Taller 3\",\n  \"telefono\": \"3000000000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "17 - Actualizar paciente",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}",
+              "if (!pm.collectionVariables.get('pacienteIdPrueba')) {",
+              "    console.error('Falta pacienteIdPrueba. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Conserva el ID y cambia la EPS', function () {",
+              "    const paciente = pm.response.json();",
+              "    pm.expect(paciente.id).to.equal(Number(pm.collectionVariables.get('pacienteIdPrueba')));",
+              "    pm.expect(paciente.eps).to.equal('EPS Prueba Actualizada');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/pacientes/{{pacienteIdPrueba}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Paciente sintético Taller 3\",\n  \"documento\": \"{{documentoPrueba}}\",\n  \"fecha_nacimiento\": \"1990-01-15\",\n  \"eps\": \"EPS Prueba Actualizada\",\n  \"telefono\": \"3000000000\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "18 - Eliminar paciente de prueba",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}",
+              "if (!pm.collectionVariables.get('pacienteIdPrueba')) {",
+              "    console.error('Falta pacienteIdPrueba. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', function () {",
+              "    pm.response.to.have.status(204);",
+              "});",
+              "pm.test('Cuerpo vacío', function () {",
+              "    pm.expect(pm.response.text()).to.equal('');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes/{{pacienteIdPrueba}}"
+      }
+    },
+    {
+      "name": "19 - Confirmar eliminación",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('token_administrador')) {",
+              "    console.error('Falta token_administrador. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}",
+              "if (!pm.collectionVariables.get('pacienteIdPrueba')) {",
+              "    console.error('Falta pacienteIdPrueba. Ejecuta las solicitudes anteriores.');",
+              "    pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "pm.test('Respuesta JSON con mensaje de error', function () {",
+              "    pm.expect(pm.response.json().error).to.be.a('string').and.not.empty;",
+              "});",
+              "if (pm.response.code === 404) {",
+              "    pm.collectionVariables.unset('pacienteIdPrueba');",
+              "    pm.collectionVariables.unset('documentoPrueba');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/pacientes/{{pacienteIdPrueba}}"
+      }
+    }
+  ]
+}
