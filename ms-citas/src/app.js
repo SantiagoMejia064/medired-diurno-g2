@@ -7,6 +7,12 @@ const citasRoutes = require('./routes/citas.routes');
 
 const app = express();
 
+// Registra las peticiones antes de procesar el JSON y las rutas.
+app.use((req, res, next) => {
+  console.log(`${new Date().toLocaleTimeString()} ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Middleware: convierte el cuerpo JSON de la petición en un objeto (req.body)
 app.use(express.json());
 
