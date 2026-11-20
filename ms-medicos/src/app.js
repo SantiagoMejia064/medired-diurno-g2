@@ -12,6 +12,8 @@ app.use(express.json());
 
 app.use((req, res, next) => {
   const inicio = Date.now();
+  const method = req.method;
+  const path = req.originalUrl;
 
   res.on('finish', () => {
     const duracion = Date.now() - inicio;
