@@ -1,0 +1,412 @@
+{
+  "info": {
+    "_postman_id": "d2485867-ff61-4baf-9a61-a36ff81b2bff",
+    "name": "Collection ms-medicos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "48922102"
+  },
+  "item": [
+    {
+      "name": "Estado del servicio",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar (Autorizado porel token)",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3003/medicos",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar por ID",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Miwibm9tYnJlIjoiTGF1cmEgR8OzbWV6Iiwicm9sIjoiYWRtaXNpb25lcyIsImlhdCI6MTc5NDE5ODA5MSwiZXhwIjoxNzk0MjI2ODkxfQ.r_E_cD_AdwPwd_qYa8j84CuZ3RQNNw4vHklsCNt7-s4",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/medicos/19",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos",
+            "19"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Médico inexistente",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/medicos/940",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos",
+            "940"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Médicos por ID's",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibm9tYnJlIjoiQWRtaW5pc3RyYWRvciBHZW5lcmFsIiwicm9sIjoiYWRtaW5pc3RyYWRvciIsImlhdCI6MTc5NDUzNjgxOCwiZXhwIjoxNzk0NTY1NjE4fQ.S2leKcQk6nrGoc8Tfmk9_ya341ZyhYVRBVIjNmOfQtI",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/medicos?ids=24",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos"
+          ],
+          "query": [
+            {
+              "key": "ids",
+              "value": "24"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ID no numérico",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/medicos/abc",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos",
+            "abc"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Filtro por especialidad",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/medicos?especialidad=cardiología",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos"
+          ],
+          "query": [
+            {
+              "key": "especialidad",
+              "value": "cardiología"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Crear médico",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibm9tYnJlIjoiQWRtaW5pc3RyYWRvciBHZW5lcmFsIiwicm9sIjoiYWRtaW5pc3RyYWRvciIsImlhdCI6MTc5NDUzNTk5MSwiZXhwIjoxNzk0NTY0NzkxfQ.g6EFNyFdDZPc0P0YvuqISYJwK1wokrj1fKGw-oI8NHc",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Benito Ramirez\",\r\n  \"registro_medico\": \"RM-022\",\r\n  \"especialidad\": \"General\",\r\n  \"sede\": \"Bogotá\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3003/medicos",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ausencia de especialidad",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Juan Perez\",\r\n  \"registro_medico\": \"RM-005\",\r\n  \"sede\": \"Cali\",\r\n  \"especialidad\": \"\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3003/medicos",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Sede incorrecta",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Tiago mejía\",\r\n  \"registro_medico\": \"RM-010\",\r\n  \"especialidad\": \"Pediatría\",\r\n  \"sede\": \"Barranquilla\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3003/medicos",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Actualizar médico por ID",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Pedro arroyo\",\r\n  \"registro_medico\": \"RM-090\",\r\n  \"especialidad\": \"General\",\r\n  \"sede\": \"Cali\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3003/medicos/17",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos",
+            "17"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Actualizar médico inexistente",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Andrés González\",\r\n  \"registro_medico\": \"RM-002\",\r\n  \"especialidad\": \"Pediatría\",\r\n  \"sede\": \"Cali\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3003/medicos/2",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos",
+            "2"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Eliminar médico existente",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibm9tYnJlIjoiQWRtaW5pc3RyYWRvciBHZW5lcmFsIiwicm9sIjoiYWRtaW5pc3RyYWRvciIsImlhdCI6MTc5NDUyNzc5MiwiZXhwIjoxNzk0NTU2NTkyfQ.Tgm_YNccR8USJkn-a-B51aZq-U9A7s52_XmMNI5uLIo",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/medicos/15",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos",
+            "15"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Eliminar médico inexistente",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3003/medicos/17",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3003",
+          "path": [
+            "medicos",
+            "17"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
