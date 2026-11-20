@@ -3,15 +3,23 @@
 Esta guía acompaña la colección canónica
 [MediRed-IPS-ms-citas.postman_collection.json](MediRed-IPS-ms-citas.postman_collection.json),
 en formato Postman Collection v2.1. Santiago Mejía Suárez es responsable de ms-citas.
-Las dos colecciones anteriores se conservan como antecedentes.
+Para comprobar el despliegue del Taller 3, utilizar preferentemente el environment
+**MediRed-Citas-Gateway**, con `http://app.medired.com/api`. Apache recibe las
+peticiones públicas y las redirige a los microservicios desplegados en las
+máquinas virtuales. Local queda como alternativa para desarrollo y depuración.
 
-Importar también uno de los environments listos para usar, siguiendo el modelo
-del paquete de Historias.
+## Inventario de archivos
 
-- [Local](MediRed-Citas-Local.postman_environment.json), con puertos 3001 a 3004.
-- [Gateway](MediRed-Citas-Gateway.postman_environment.json), con `http://app.medired.com/api`.
-- [Preparación opcional de cuentas](ms-usuarios-acceso-citas.postman_collection.json),
-  adaptada de Historias y compatible con estos environments.
+La revisión recursiva de `ms-citas/docs/` del 20 de noviembre de 2026 encontró
+cinco archivos y ninguna subcarpeta.
+
+| Archivo | Finalidad y momento de importación |
+| --- | --- |
+| [MediRed-IPS-ms-citas.postman_collection.json](MediRed-IPS-ms-citas.postman_collection.json) | Colección principal, **MediRed IPS · ms-citas · pruebas reproducibles**, con 41 solicitudes. Importar para las pruebas de Citas. |
+| [MediRed-Citas-Gateway.postman_environment.json](MediRed-Citas-Gateway.postman_environment.json) | Environment recomendado para acceder al despliegue mediante Apache. Importar junto con la colección principal. |
+| [MediRed-Citas-Local.postman_environment.json](MediRed-Citas-Local.postman_environment.json) | Environment alternativo para servicios ejecutados en el equipo de Postman o su Agent. Importar cuando se necesite desarrollo o depuración local. |
+| [ms-usuarios-acceso-citas.postman_collection.json](ms-usuarios-acceso-citas.postman_collection.json) | Colección auxiliar **MediRed IPS - Usuarios - Acceso para Citas**, con 6 solicitudes. Importar solo para consultar cuentas y preparar Médico o Admisiones si faltan, con un administrador existente. |
+| [README-POSTMAN.md](README-POSTMAN.md) | Esta guía de configuración, ejecución y resultados. Consultarla antes de probar. |
 
 Los environments habilitan `permitirEscritura=true` para el CRUD del laboratorio.
 Las contraseñas vienen vacías y marcadas como sensibles. Completar las tres cuentas
@@ -27,14 +35,16 @@ automáticamente dentro de cada colección.
    de pruebas y un `JWT_SECRET` compartido. Seguir las instrucciones de instalación
    existentes en cada servicio.
 3. Preparar tres cuentas activas de prueba en ms-usuarios, una con rol
-   `administrador`, otra con rol `medico` y otra con rol `admisiones`. Obtener sus credenciales de la persona
-   responsable del entorno. La colección utiliza cuentas existentes.
+   `administrador`, otra con rol `medico` y otra con rol `admisiones`. Obtener sus
+   credenciales de la persona responsable del entorno. La colección utiliza cuentas existentes.
 4. Tener al menos un paciente y un médico registrados. La preparación consulta
    sus listados, selecciona una referencia de cada uno y calcula un paciente
    inexistente a partir del máximo ID. No exige IDs específicos.
 5. En cada entorno, configurar `ROLES=administrador,admisiones,medico` en el
-   `.env` privado de ms-usuarios, según su `.env.example`.
-6. En Postman, seleccionar **Import** y abrir el JSON canónico.
+   `.env` privado de ms-usuarios, según su [.env.example](../../ms-usuarios/.env.example).
+6. Seguir la importación del environment Gateway descrita más adelante. Los
+   servicios y sus bases deben estar disponibles en las VMs. Para la instalación,
+   consultar la [guía de despliegue](../../deploy/README.md).
 
 Los POST, PUT y DELETE deben ejecutarse sobre una base de datos de pruebas o
 contar con autorización explícita del responsable. El recorrido completo está
@@ -44,8 +54,8 @@ proveedores en producción. La colección exportada trae
 
 ## Variables y credenciales
 
-Importar y seleccionar el environment Local o Gateway de este paquete. Introducir las credenciales como
-valores locales, marcando las contraseñas como sensibles. Mantener vacíos los
+Importar y seleccionar el environment Gateway de este paquete. Introducir las
+credenciales como valores locales, marcando las contraseñas como sensibles. Mantener vacíos los
 valores compartidos y evitar exportar el entorno con secretos.
 
 | Variable configurable | Valor o finalidad |
@@ -76,12 +86,58 @@ registros existentes para utilizarlos como citas de prueba.
 | `citaAuxId` | Cita creada por el caso 19 para probar conflictos en PUT. |
 | `citaReferenciasId` | Cita cancelada del caso 20, que no bloquea el horario. |
 | `citaManualId` | Cita cancelada para la prueba manual de degradación. |
+| `origenDatos` | URLs de Citas, login, Pacientes y Médicos asociadas a los IDs propios. |
+| `citaIdPropia`, `citaAuxIdPropia`, `citaReferenciasIdPropia`, `citaManualIdPropia` | Paciente, médico y fecha capturados al crear cada registro, utilizados para comprobar la limpieza. |
 
 Los scripts trasladan estas variables generadas al ámbito local de cada
 petición para evitar que un valor antiguo del entorno o de un archivo de datos
 reemplace el ID o token recién obtenido.
 
-### Entorno local
+### Entorno recomendado por Gateway Apache
+
+1. En Postman, pulsar **Import** y seleccionar
+   `MediRed-IPS-ms-citas.postman_collection.json` desde esta carpeta.
+2. Importar `MediRed-Citas-Gateway.postman_environment.json`.
+3. En el selector de environments, arriba a la derecha, elegir
+   **MediRed-Citas-Gateway**. Confirmar que las URLs corresponden a la tabla.
+4. Completar `adminEmail`, `adminPassword`, `medicoEmail`, `medicoPassword`,
+   `admisionesEmail` y `admisionesPassword` con las cuentas vigentes del laboratorio.
+5. Conservar `permitirEscritura=true`, `modoLimpieza=false` y
+   `modoFalloPacientes` vacío para el recorrido normal. Dejar `healthUrl` vacío
+   con el Gateway actual.
+
+| Variable | Valor |
+| --- | --- |
+| `baseUrl` | `http://app.medired.com/api` |
+| `loginUrl` | `http://app.medired.com/api/usuarios/login` |
+| `pacientesUrl` | `http://app.medired.com/api` |
+| `medicosUrl` | `http://app.medired.com/api` |
+| `healthUrl` | Vacío, se omite **Health público**. |
+
+El computador debe resolver `app.medired.com` según la configuración DNS del
+despliegue. Las peticiones añaden sus rutas, por ejemplo `{{baseUrl}}/citas`.
+Usar las direcciones equivalentes de un despliegue de pruebas para ejecutar
+el recorrido completo por Gateway.
+
+La [configuración de Apache del repositorio](../../deploy/apache/app.conf)
+publica los recursos `/api/usuarios`,
+`/api/pacientes`, `/api/medicos`, `/api/citas` y `/api/historias`.
+No publica `/api/health`. Por eso `healthUrl` es independiente.
+Configurar una dirección de salud accesible desde el equipo que ejecuta Postman,
+por ejemplo mediante un túnel autorizado al puerto local del servicio.
+Si no existe ese acceso, dejar `healthUrl` vacío. **Health público** se omite
+automáticamente. Comprobar
+`GET /health` desde el servidor de aplicaciones. Registrar esa omisión en el
+resultado.
+
+### Entorno Local para desarrollo y depuración
+
+Importar `MediRed-Citas-Local.postman_environment.json` y seleccionar
+**MediRed-Citas-Local** cuando se trabaje con servicios locales. Deben estar
+disponibles Usuarios, Pacientes, Médicos y Citas, con sus bases preparadas y la
+misma clave JWT, en el equipo donde corre Postman o su Desktop Agent.
+Este recorrido permite depurar las APIs directamente. La comprobación del
+despliegue del Taller 3 se realiza mediante Gateway.
 
 | Variable | Valor |
 | --- | --- |
@@ -91,30 +147,40 @@ reemplace el ID o token recién obtenido.
 | `medicosUrl` | `http://127.0.0.1:3003` |
 | `healthUrl` | `http://127.0.0.1:3004/health` |
 
-### Entorno por Gateway Apache
+## Autenticación automática y solicitudes individuales
 
-| Variable | Valor |
-| --- | --- |
-| `baseUrl` | `http://app.medired.com/api` |
-| `loginUrl` | `http://app.medired.com/api/usuarios/login` |
-| `pacientesUrl` | `http://app.medired.com/api` |
-| `medicosUrl` | `http://app.medired.com/api` |
+En **00 - Autenticación**, ejecutar **Login administrador**, **Login médico** y
+**Login admisiones**, en ese orden. Cada solicitud hace `POST {{loginUrl}}`,
+enviando las credenciales correspondientes del environment como `email` y `password`.
+Los scripts serializan esos valores como JSON y utilizan **No Auth** en los logins.
 
-El computador debe resolver `app.medired.com` según la configuración DNS del
-despliegue. Las peticiones añaden sus rutas, por ejemplo `{{baseUrl}}/citas`.
-Usar las direcciones equivalentes de un despliegue de pruebas para ejecutar
-el recorrido completo por Gateway.
+| Login | Credenciales del environment | Token guardado en la colección |
+| --- | --- | --- |
+| Administrador | `adminEmail`, `adminPassword` | `tokenAdmin` |
+| Médico | `medicoEmail`, `medicoPassword` | `tokenMedico` |
+| Admisiones | `admisionesEmail`, `admisionesPassword` | `tokenAdmisiones` |
 
-La configuración actual de Apache publica los recursos `/api/usuarios`,
-`/api/pacientes`, `/api/medicos`, `/api/citas` y `/api/historias`.
-No publica `/api/health`. Por eso `healthUrl` es independiente.
-Configurar una dirección de salud accesible desde el equipo que ejecuta Postman,
-por ejemplo mediante un túnel autorizado al puerto local del servicio.
-Si no existe ese acceso, dejar `healthUrl` vacío. **Health público** se omite automáticamente. Comprobar
-`GET /health` desde el servidor de aplicaciones. Registrar esa omisión en el
-resultado.
+Cada login borra primero su token anterior. La respuesta debe tener HTTP 200,
+`token` como cadena con tres segmentos separados por puntos y `usuario.rol` igual
+al rol esperado. Solo entonces se guarda el token mediante `pm.collectionVariables`.
+Las peticiones siguientes lo recuperan automáticamente. Las cuentas deben existir,
+estar activas y pertenecer al rol esperado, y Usuarios debe ser accesible desde Postman.
+Los servicios deben verificar los JWT con la clave compartida.
 
-## Ejecución normal
+Si faltan credenciales, el script omite la solicitud y muestra un error en la
+consola. Si falla la validación del login, se descarta el token y se detiene el
+Runner. Con **Send**, corregir el acceso antes de continuar manualmente.
+
+Para solicitudes individuales, seleccionar una petición y pulsar **Send**. Tras
+los tres logins, ejecutar en orden las tres solicitudes de **01 - Preparación de
+datos**. Después seguir el orden de **02 - Pruebas normales** para disponer de
+los IDs que requieren las consultas, actualizaciones y eliminaciones. Por ejemplo,
+**02 - Obtener cita propia por ID** necesita la cita creada por **06 - Crear cita
+válida**. Las peticiones aisladas conservan sus scripts y aserciones en
+**Test Results**. El envío de una petición protegida por sí solo requiere haber
+ejecutado el login correspondiente.
+
+## Ejecución normal con Collection Runner
 
 1. Verificar el entorno seleccionado, las URLs, las credenciales locales y la
    autorización para utilizar la base de pruebas.
@@ -132,14 +198,15 @@ resultado.
    compartir o exportar la colección. Revisar también el historial y los reportes
    antes de compartirlos, porque el login devuelve tokens.
 
-Las primeras solicitudes envían `email` y `password` a
-`POST {{loginUrl}}`. Cada login verifica código 200, propiedad `token` con
-formato JWT y `usuario.rol`. Solo entonces guarda el token de colección.
-Un login fallido limpia su token y detiene el Runner.
+Este es el recorrido automático completo de pruebas normales de la colección.
+Las carpetas 03 y 90–92 se ejecutan por separado cuando se necesita recuperar una
+corrida o intervenir sobre Pacientes. Sus condiciones de omisión dependen de los
+modos del environment, por lo que deben mantenerse fuera de la selección normal.
 
-Las peticiones heredan Bearer `{{tokenAdmin}}`. Admisiones ejecuta crear, actualizar y eliminar la cita principal. Se usan tokens específicos en los casos de médico,
-token inválido y acceso público. Los casos sin token utilizan explícitamente
-**No Auth**, evitando la autenticación heredada.
+Las peticiones heredan Bearer `{{tokenAdmin}}`. Admisiones crea, actualiza y elimina
+la cita principal, mientras Administrador crea y limpia las auxiliares. Médico
+realiza una consulta y un POST que espera 403. Los casos sin token y Health usan
+**No Auth**, y el caso 16 utiliza un token deliberadamente inválido.
 
 La preparación calcula horarios aproximadamente 90 días en el futuro y evita
 los ya ocupados por el médico, excluyendo citas canceladas. Las fechas se
@@ -149,6 +216,27 @@ durante el laboratorio para mantener válidos los casos de ID inexistente y
 horario libre.
 
 ### Cobertura y orden
+
+El JSON vigente contiene **41 solicitudes guardadas**, distribuidas así.
+
+| Carpeta | Solicitudes guardadas | Uso |
+| --- | --- | --- |
+| 00 - Autenticación | 3 | Login de los tres roles |
+| 01 - Preparación de datos | 3 | Referencias y horarios libres |
+| 02 - Pruebas normales | 28 | CRUD, validaciones, permisos, relaciones y limpieza |
+| 03 - Limpieza de una ejecución interrumpida | 3 | Recuperar IDs pendientes |
+| 90 - Preparación manual de fallo | 1 | Crear cita para degradación |
+| 91 - Proveedor detenido (manual) | 2 | Casos 24 y 25 |
+| 92 - Limpieza manual de fallo | 1 | Eliminar cita de degradación |
+| **Total de la colección principal** | **41** | La auxiliar de Usuarios contiene otras 6 |
+
+El recorrido normal selecciona 34 solicitudes guardadas. Con Gateway y `healthUrl`
+vacío, Health se omite y quedan 33 solicitudes enviadas desde esos elementos.
+Además, los scripts realizan tres GET previos a las eliminaciones mediante
+`pm.sendRequest()`. Esas llamadas pueden elevar el contador HTTP del reporte a 36
+en Gateway o 37 con Health habilitado. Las llamadas internas de Citas a Pacientes
+y Médicos se observan en los proveedores. Estos recuentos dependen de completar
+el recorrido sin otras omisiones ni interrupciones.
 
 La numeración de los casos originales se conserva para facilitar la revisión,
 pero el orden del Runner prepara primero los registros que necesitan otros
@@ -195,10 +283,11 @@ cambian mientras hay IDs pendientes. Una nueva corrida normal también se detien
 si quedan citas pendientes. Al recuperar, activar primero `modoLimpieza=true` y
 ejecutar los logins para renovar los tokens.
 
-Antes de cada eliminación propia, una consulta GET verifica paciente, médico y
-fecha contra los atributos capturados al crear. Una diferencia detiene el Runner.
-Conservar la colección anterior para limpiar registros creados por una versión
-previa que todavía no guardaba estos atributos.
+Antes de eliminar cada registro propio, una consulta GET verifica paciente,
+médico y fecha contra los atributos capturados al crear. Una diferencia detiene
+el Runner. El caso 14 repite directamente el DELETE del caso 13 para comprobar 404.
+Si faltan los atributos guardados o los IDs pertenecen a una versión previa,
+revisar los registros con el responsable del laboratorio antes de limpiar.
 Antes de cambiar entre local y Gateway, completar la limpieza y vaciar las
 variables generadas. Una pérdida de conexión justo después de un POST puede
 impedir capturar el ID. En ese caso, el responsable del laboratorio debe revisar
@@ -226,12 +315,27 @@ Las carpetas manuales se omiten con la configuración predeterminada.
 
 ## Interpretación de resultados
 
-Una petición aprobada debe tener el código esperado y superar sus aserciones.
+Evaluar el código HTTP esperado junto con las aserciones de **Test Results**.
+Una solicitud puede ejecutar varias aserciones. El total de solicitudes guardadas
+es el inventario de la colección, y el reporte de ejecución muestra las solicitudes
+enviadas, sus omisiones y las aserciones evaluadas. Registrar por separado las
+aserciones aprobadas, fallidas y los errores de scripts o de conexión.
+
+Si el Runner muestra **No tests found**, esa fila aporta el código HTTP recibido
+y carece de aserciones evaluadas. Contabilizar como aprobadas únicamente las
+aserciones que el reporte marque como tales.
+
 Los errores se verifican mediante `error` y, para datos inválidos, `detalles`,
 según los controladores actuales.
 
 - Un login fallido requiere revisar credenciales, cuenta activa y rol.
+- Si falta una credencial, revisar el environment seleccionado y el mensaje
+  `Configura ...` en la consola. Los tokens se guardan en la colección que hizo
+  login. La auxiliar de Usuarios y la principal de Citas mantienen tokens propios.
 - Un 401 posterior al login requiere comprobar expiración y clave JWT compartida.
+- Un 200 en login con rol distinto al esperado falla la aserción del rol.
+- Una respuesta HTML, un 502/503 de Apache o un error de conexión en login requiere
+  revisar DNS, acceso al Gateway, Usuarios y la configuración del proxy.
 - Un 403 esperado en el caso 18 confirma el rechazo del rol médico.
 - Un 409 inesperado requiere repetir la preparación de horarios en el laboratorio.
 - Un 502 o 503 en el recorrido normal requiere revisar proveedores y sus URLs.
@@ -263,12 +367,12 @@ las cuentas nuevas se pueden editar en el cuerpo de las peticiones opcionales.
 
 ## Ejecución por terminal
 
-Desde la raíz del repositorio, con Postman CLI instalado, utilizar una copia
-privada del environment con las credenciales del laboratorio. Sustituir su ruta
-en este comando.
+Desde la raíz del repositorio, con Postman CLI instalado, configurar las
+credenciales únicamente en la copia local del environment Gateway antes de
+ejecutar este comando. Retirar esos valores antes de compartir el archivo.
 
 ```bash
-postman collection run ms-citas/docs/MediRed-IPS-ms-citas.postman_collection.json -e /ruta/privada/Citas.postman_environment.json -i "00 - Autenticación" -i "01 - Preparación de datos" -i "02 - Pruebas normales" --no-report-events
+postman collection run ms-citas/docs/MediRed-IPS-ms-citas.postman_collection.json -e ms-citas/docs/MediRed-Citas-Gateway.postman_environment.json -i "00 - Autenticación" -i "01 - Preparación de datos" -i "02 - Pruebas normales" --no-report-events
 ```
 
 El comando devuelve un código distinto de cero cuando fallan aserciones. Revisar
@@ -276,23 +380,44 @@ también errores de scripts y omisiones. Una corrida CLI interrumpida puede requ
 localizar sus registros en la base de laboratorio. Para recuperación con IDs
 conservados entre ejecuciones, utilizar el Runner de Postman Desktop.
 
-## Verificación de esta actualización
+## Resultados históricos y evidencia del despliegue
 
-Se ejecutó dos veces la corrida normal con Postman CLI contra las aplicaciones
-Express del repositorio, usando cuentas y repositorios temporales en memoria.
+El README anterior dejó registrada la ejecución de dos corridas normales con
+Postman CLI contra las aplicaciones Express del repositorio, usando cuentas y
+repositorios temporales en memoria.
 Cada corrida pasó 83 aserciones con cero fallos, código de salida 0 y cero citas
 restantes. Se ejercitaron autenticación, rutas, lógica de negocio y clientes HTTP
 entre Usuarios, Pacientes, Médicos y Citas.
 
-Se corrigió el ID inexistente calculado como máximo más uno, porque podía quedar
-ocupado por las creaciones de la propia corrida antes de probar el PUT 404.
-Ahora se calcula con un margen de un millón sobre los IDs observados.
+| Ejecución | Solicitudes | Aserciones evaluadas | Aprobadas | Fallidas | Entorno y procedencia |
+| --- | --- | --- | --- | --- | --- |
+| Normal histórica, dos corridas | 34 elementos en el recorrido, con Health, y 3 GET de scripts | 83 por corrida | 83 por corrida | 0 por corrida | Aplicaciones Express con cuentas y repositorios temporales en memoria. Resultado registrado en la versión anterior de este README. |
+| Preparación de cuentas histórica | 6 elementos de la auxiliar | 9 | 9 | 0 | Usuarios con repositorio temporal. Resultado registrado en la versión anterior de este README. |
+| Corrida completa real por Gateway | Resultado global pendiente de documentar | Pendiente | Pendiente | Pendiente | Se necesita un reporte verificable que identifique el environment Gateway y la ejecución completa. |
 
-También se verificó la preparación opcional de cuentas contra Usuarios con un
-repositorio temporal, incluyendo creación y login de Médico y Admisiones, con 9 aserciones aprobadas.
-Se comprobaron los scripts y los bloqueos por cambio de destino y atributos de
-una cita distinta antes de limpiar.
+En el inventario revisado del repositorio no se encontró un reporte o una captura
+con el resumen verificable de una corrida completa de Citas contra las VMs por
+Gateway. El resultado de 83 aserciones se conserva como antecedente de la prueba
+en memoria. La revisión actual contrastó la documentación con los archivos y
+scripts del repositorio.
+Los reportes completos de las corridas históricas tampoco se encuentran en `docs/`.
 
-Quedan por comprobar MySQL, Apache, conectividad con las VMs y las carpetas de
-caída en el laboratorio del equipo. Gateway omite Health y tiene dos aserciones
-menos.
+En una actualización previa se corrigió el ID inexistente calculado como máximo
+más uno, porque podía quedar ocupado por las creaciones de la propia corrida
+antes de probar el PUT 404. El script vigente utiliza un margen de un millón
+sobre los IDs observados.
+
+La revisión anterior también registró la comprobación de la preparación de
+cuentas, incluida creación y login de Médico y Admisiones, y de los bloqueos por
+cambio de destino y atributos de una cita distinta antes de limpiar.
+
+Para documentar Gateway, conservar el resumen del Runner con nombre del environment,
+fecha, carpetas seleccionadas, solicitudes ejecutadas y omitidas, aserciones
+aprobadas y fallidas y errores. Una captura de códigos HTTP acredita las respuestas
+visibles. El resultado global requiere el resumen completo de la ejecución.
+
+Con el mismo recorrido y todas las comprobaciones normales exitosas, omitir Health
+reduce en dos las 83 aserciones históricas. Las 81 resultantes son una expectativa
+derivada de los scripts actuales. El resultado real debe tomarse del reporte del
+laboratorio. La validación de MySQL, Apache, conectividad de las VMs y las carpetas
+de caída requiere evidencia de ese entorno.
