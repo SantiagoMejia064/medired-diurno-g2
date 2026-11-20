@@ -10,17 +10,61 @@ const app = express();
 // Middleware: convierte el cuerpo JSON de la petición en un objeto (req.body)
 app.use(express.json());
 
+// Registra la solicitud al finalizar e identifica los medicos involucrados.
 app.use((req, res, next) => {
   const inicio = Date.now();
-  const method = req.method;
-  const path = req.originalUrl;
+  const jsonOriginal = res.json.bind(res);
+  let idsRespuesta = [];
+
+  function obtenerIds(datos) {
+    if (Array.isArray(datos)) {
+      return datos
+        .map((medico) => medico?.id)
+        .filter((id) => id !== undefined && id !== null);
+    }
+
+    if (datos && typeof datos === 'object' && datos.id !== undefined && datos.id !== null) {
+      return [datos.id];
+    }
+
+    return [];
+  }
+
+  res.json = function (datos) {
+    if (req.originalUrl.startsWith('/medicos')) {
+      idsRespuesta = obtenerIds(datos);
+    }
+
+    return jsonOriginal(datos);
+  };
 
   res.on('finish', () => {
     const duracion = Date.now() - inicio;
+    const metodo = req.method;
+    const ruta = req.originalUrl;
+    const estado = res.statusCode;
+    let detalle = '';
 
-    console.log(
-      `[ms-medicos] ${req.method} ${req.path} - HTTP ${res.statusCode} - ${duracion}ms`
-    );
+    if (metodo === 'GET' && idsRespuesta.length > 0) {
+      detalle = ` | IDs: ${idsRespuesta.join(', ')}`;
+    }
+
+    if (metodo === 'POST' && estado === 201) {
+      const id = idsRespuesta[0];
+      if (id !== undefined) detalle = ` | ID creado: ${id}`;
+    }
+
+    if (metodo === 'PUT') {
+      const id = req.originalUrl.match(/^\/medicos\/(\d+)$/)?.[1];
+      if (id) detalle = ` | ID actualizado: ${id}`;
+    }
+
+    if (metodo === 'DELETE') {
+      const id = req.originalUrl.match(/^\/medicos\/(\d+)$/)?.[1];
+      if (id) detalle = ` | ID eliminado: ${id}`;
+    }
+
+    console.log(`[ms-medicos] ${metodo} ${ruta} - HTTP ${estado}${detalle} - ${duracion}ms`);
   });
 
   next();
