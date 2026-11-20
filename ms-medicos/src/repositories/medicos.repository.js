@@ -26,10 +26,6 @@ async function findAll(filtros = {}) {
   }
   const [filas] = await pool.query(sql + ' ORDER BY id', valores);
 
-  console.log('SQL EJECUTADO:', sql);
-  console.log('FILTROS:', filtros);
-  console.log('MÉDICOS DEVUELTOS POR MYSQL:', filas);
-
   return filas;
 }
 
