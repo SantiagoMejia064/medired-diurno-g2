@@ -1,3 +1,4 @@
+
 # ms-pacientes · MediRed IPS
 
 Microservicio REST para la gestión de pacientes de MediRed IPS, desarrollado con **Node.js y Express**, utilizando una arquitectura en capas y una base de datos **MariaDB** para el almacenamiento persistente de la información.
@@ -29,7 +30,7 @@ JWT_SECRET=tu_clave_secreta
 
 Los valores de conexión deben coincidir con la configuración local de MariaDB. El archivo `.env` contiene información sensible, por lo que no debe subirse al repositorio.
 
-Antes de iniciar el servicio, se debe verificar que la base de datos `pacientes_db` exista y que se haya seleccionado al ejecutar el script SQL. El proyecto incluye el archivo `db/schema.sql`, que define la estructura de la tabla `pacientes` e inserta registros iniciales.
+Antes de iniciar el servicio, se debe verificar que la base de datos `pacientes_db` exista y ejecutar el script SQL `db/schema.sql`, que define la estructura de la tabla `pacientes` e inserta registros iniciales.
 
 Para ejecutar el microservicio en modo desarrollo:
 
@@ -58,29 +59,43 @@ El proyecto está organizado en capas para separar las responsabilidades de cada
 | Controlador | `src/controllers/pacientes.controller.js` | Recibe las solicitudes HTTP y devuelve las respuestas correspondientes. |
 | Servicio | `src/services/pacientes.service.js` | Aplica las validaciones y las reglas de negocio. |
 | Modelo | `src/models/paciente.js` | Define la estructura de los datos y valida la información del paciente. |
-| Repositorio | `src/repositories/pacientes.repository.js` | Ejecuta las consultas SQL para gestionar los pacientes en la base de datos. |
+| Repositorio | `src/repositories/pacientes.repository.js` | Ejecuta las consultas SQL para gestionar los pacientes. |
 | Middleware | `src/middlewars/auth.js` | Verifica los tokens JWT y los permisos según el rol del usuario. |
 | Utilidad | `src/utils/http-error.js` | Permite manejar errores asociados a códigos HTTP. |
 
 ## Autenticación y autorización
 
-El microservicio utiliza JSON Web Token (JWT) para proteger el acceso a los recursos.
+El microservicio utiliza **JSON Web Token (JWT)** para proteger el acceso a los recursos.
 
-- Todas las rutas de `/pacientes` requieren un token válido.
-- Los usuarios autenticados pueden realizar consultas.
-- Las operaciones de creación, actualización y eliminación están restringidas al rol `administrador`.
-- Si no se proporciona un token válido, se devuelve `401 Unauthorized`.
-- Si el usuario no tiene los permisos necesarios, se devuelve `403 Forbidden`.
+El token es emitido por el microservicio `ms-usuarios` y verificado localmente por `ms-pacientes` mediante el middleware `verificarToken` y la clave compartida `JWT_SECRET`.
 
-Para realizar solicitudes protegidas desde Postman, se debe incluir el siguiente encabezado:
+Todas las rutas de `/pacientes` requieren autenticación.
+
+Las operaciones de creación, actualización y eliminación están restringidas al rol `administrador`.
+
+### Permisos de acceso
+
+| Recurso | administrador | admisiones | medico |
+|---|---|---|---|
+| `/pacientes` | GET, POST, PUT, DELETE | GET | GET |
+
+Los usuarios autenticados pueden consultar pacientes, pero únicamente el administrador puede crear, actualizar o eliminar registros.
+
+La protección se realiza en el backend, independientemente de los controles disponibles en el frontend.
+
+Para realizar solicitudes protegidas desde Postman, se debe incluir el encabezado:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-El token debe ser generado por el microservicio de autenticación de MediRed IPS y contener la información de autorización requerida.
+El token debe ser generado por `ms-usuarios` y contener la información de autorización requerida.
 
-## Endpoints
+Si no se proporciona un token válido, el servicio devuelve `401 Unauthorized`.
+
+Si el usuario no tiene los permisos necesarios, devuelve `403 Forbidden`.
+
+## Contrato REST
 
 ### Verificación del servicio
 
@@ -118,9 +133,17 @@ Devuelve los pacientes que pertenecen a la EPS indicada.
 GET /pacientes?ids=3,13
 ```
 
-Permite consultar varios pacientes mediante sus identificadores, separados por comas, en una sola solicitud. Los identificadores deben ser enteros positivos. Si el formato no es válido, el servicio responde con `400 Bad Request`.
+Permite consultar varios pacientes mediante sus identificadores, separados por comas, en una sola solicitud.
 
-Los filtros por EPS y por identificadores se procesan desde el controlador y se aplican en las consultas del repositorio.
+Los identificadores deben ser enteros positivos. Si el formato no es válido, el servicio responde con `400 Bad Request`.
+
+También es posible combinar ambos filtros:
+
+```http
+GET /pacientes?eps=Sanitas&ids=3,13
+```
+
+Los filtros se procesan desde el controlador y se aplican en las consultas SQL del repositorio.
 
 ## Ejemplo de creación de un paciente
 
@@ -157,7 +180,7 @@ La respuesta también incluye el encabezado `Location`, que indica la dirección
 
 `/pacientes/18`
 
-**Nota:** el identificador del ejemplo es ilustrativo. El valor real es generado automáticamente por la base de datos.
+El identificador del ejemplo es ilustrativo. El valor real es generado automáticamente por la base de datos.
 
 ## Ejemplo de actualización
 
@@ -202,9 +225,161 @@ El modelo y la capa de servicio aplican las siguientes validaciones:
 
 ### Regla de negocio: documento único
 
-Cada paciente debe tener un número de documento único. Antes de registrar o actualizar un paciente, la capa de servicio consulta el repositorio mediante `findByDocumento()` para comprobar si el documento ya está asociado a otro registro.
+Cada paciente debe tener un número de documento único.
 
-Si el documento pertenece a otro paciente, el servicio responde con `409 Conflict`. Durante una actualización, se excluye de esta comprobación el identificador del paciente que se está modificando, permitiendo conservar su propio documento.
+Antes de registrar o actualizar un paciente, la capa de servicio consulta el repositorio mediante `findByDocumento()` para comprobar si el documento ya está asociado a otro registro.
+
+Si el documento pertenece a otro paciente, el servicio responde con `409 Conflict`.
+
+Durante una actualización, se excluye de esta comprobación el identificador del paciente que se está modificando, permitiendo conservar su propio documento.
+
+La base de datos también aplica una restricción `UNIQUE` sobre el campo `documento`, evitando duplicados incluso ante solicitudes simultáneas.
+
+## Relaciones entre microservicios
+
+MediRed IPS utiliza una arquitectura de microservicios en la que cada servicio administra sus propios recursos y responsabilidades.
+
+`ms-pacientes` se relaciona con otros microservicios mediante solicitudes HTTP REST y autenticación JWT.
+
+Su función principal dentro de esta integración es proporcionar información de los pacientes a los servicios que la necesitan, sin compartir directamente su base de datos.
+
+### Relación con ms-usuarios
+
+El microservicio `ms-usuarios` se encarga de autenticar a los usuarios y emitir los tokens JWT.
+
+Cuando un usuario realiza una solicitud a `ms-pacientes`, debe incluir su token en el encabezado `Authorization`.
+
+`ms-pacientes` verifica localmente el token mediante `JWT_SECRET`, sin necesidad de consultar a `ms-usuarios` en cada petición.
+
+El rol contenido en el token determina las operaciones permitidas.
+
+### Me consultan
+
+El microservicio `ms-pacientes` proporciona información a `ms-citas` y `ms-historias`, permitiendo que estos servicios consulten los pacientes relacionados con sus registros.
+
+Ambos pueden utilizar el endpoint `GET /pacientes?ids=` para recuperar varios pacientes en una sola solicitud HTTP, evitando realizar una petición individual por cada identificador.
+
+| Microservicio que me consulta | Endpoint utilizado | Finalidad |
+|---|---|---|
+| `ms-citas` | `GET /pacientes?ids=1,3` | Consultar los pacientes asociados a las citas médicas y obtener su información mediante los identificadores registrados. |
+| `ms-historias` | `GET /pacientes?ids=1,3` | Consultar los pacientes asociados a las historias clínicas y obtener sus datos mediante sus identificadores. |
+
+#### Consulta desde ms-citas
+
+`ms-citas` administra las citas médicas y utiliza el campo `paciente_id` para identificar al paciente asociado a cada cita.
+
+Cuando necesita obtener información de varios pacientes, puede realizar una consulta por lotes a `ms-pacientes`.
+
+Ejemplo:
+
+```http
+GET /pacientes?ids=18,3
+Authorization: Bearer <token>
+```
+
+La respuesta contiene un arreglo JSON con los pacientes encontrados.
+
+Esto permite que `ms-citas` consulte la información necesaria sin acceder directamente a la base de datos `pacientes_db`.
+
+#### Consulta desde ms-historias
+
+`ms-historias` administra las historias clínicas y utiliza los identificadores de pacientes para relacionar cada historia con su correspondiente paciente.
+
+Cuando necesita consultar los datos de varios pacientes asociados a historias clínicas, puede utilizar el mismo endpoint de consulta por lotes.
+
+Ejemplo:
+
+```http
+GET /pacientes?ids=3,13
+Authorization: Bearer <token>
+```
+
+El microservicio devuelve los registros encontrados, permitiendo que `ms-historias` utilice la información correspondiente sin duplicar los datos de los pacientes en su propia base de datos.
+
+### Funcionamiento de la consulta por lotes
+
+La consulta por lotes se implementa mediante el parámetro `ids`.
+
+Ejemplo:
+
+```http
+GET /pacientes?ids=18,3
+```
+
+El funcionamiento se divide en las siguientes etapas:
+
+1. El controlador recibe los identificadores enviados en la URL.
+2. Se separan mediante comas y se convierten a números.
+3. Se valida que todos sean enteros positivos.
+4. El servicio solicita la información al repositorio.
+5. El repositorio ejecuta una consulta SQL utilizando `WHERE id IN (...)`.
+6. Se devuelve un arreglo JSON con los pacientes encontrados.
+
+Ejemplo de la consulta SQL utilizada:
+
+```sql
+SELECT *
+FROM pacientes
+WHERE id IN (?, ?)
+ORDER BY id;
+```
+
+Los valores se envían como parámetros, evitando concatenar directamente los identificadores en la consulta.
+
+Si uno de los identificadores no cumple las validaciones, el servicio responde con `400 Bad Request`.
+
+Si algún identificador no existe, simplemente no aparece en el arreglo de resultados.
+
+### Registro de peticiones HTTP
+
+El microservicio registra las solicitudes HTTP recibidas mediante un middleware configurado en `src/app.js`.
+
+Este registro permite identificar el método HTTP, la ruta consultada y el código de respuesta.
+
+Ejemplo:
+
+```text
+8:30:36 p. m. GET /pacientes?ids=18,3 → 200
+8:31:02 p. m. GET /pacientes/18 → 200
+8:31:25 p. m. POST /pacientes → 201
+8:32:10 p. m. PUT /pacientes/18 → 200
+8:33:05 p. m. DELETE /pacientes/18 → 204
+```
+
+Cuando `ms-citas` o `ms-historias` realiza una consulta por lotes, se registra una sola petición GET por cada solicitud recibida, independientemente de la cantidad de identificadores incluidos.
+
+Por ejemplo, al consultar dos pacientes mediante:
+
+```http
+GET /pacientes?ids=18,3
+```
+
+Se registra una sola petición:
+
+```text
+8:30:36 p. m. GET /pacientes?ids=18,3 → 200
+```
+
+Este comportamiento permite comprobar que la consulta por lotes funciona correctamente y evita realizar múltiples solicitudes individuales.
+
+### Independencia de las bases de datos
+
+Cada microservicio mantiene su propia base de datos.
+
+`ms-pacientes` administra `pacientes_db`, mientras que `ms-citas` y `ms-historias` gestionan sus propios registros.
+
+La relación entre los servicios se realiza mediante identificadores y solicitudes REST, sin acceder directamente a las tablas de otros microservicios.
+
+Esto permite mantener separadas las responsabilidades y facilita el mantenimiento de cada servicio.
+
+### Resumen de relaciones
+
+| Microservicio | Relación con ms-pacientes | Mecanismo |
+|---|---|---|
+| `ms-usuarios` | Emite los tokens utilizados para autenticar las solicitudes. | JWT |
+| `ms-citas` | Consulta pacientes asociados a las citas médicas. | HTTP REST |
+| `ms-historias` | Consulta pacientes asociados a las historias clínicas. | HTTP REST |
+| `ms-pacientes` | Administra la información de los pacientes. | MariaDB |
 
 ## Códigos de respuesta HTTP
 
@@ -222,7 +397,9 @@ Si el documento pertenece a otro paciente, el servicio responde con `409 Conflic
 
 ## Almacenamiento de datos
 
-La información de los pacientes se almacena de manera persistente en una base de datos **MariaDB**, administrada mediante XAMPP. La conexión desde Node.js se realiza utilizando el paquete `mysql2/promise`, mientras que la capa de repositorio se encarga de ejecutar las consultas SQL para listar, buscar, registrar, actualizar y eliminar pacientes.
+La información de los pacientes se almacena de manera persistente en una base de datos **MariaDB**, administrada mediante XAMPP.
+
+La conexión desde Node.js se realiza utilizando el paquete `mysql2/promise`, mientras que la capa de repositorio se encarga de ejecutar las consultas SQL para listar, buscar, registrar, actualizar y eliminar pacientes.
 
 La tabla `pacientes` contiene los siguientes campos:
 
@@ -235,13 +412,79 @@ La tabla `pacientes` contiene los siguientes campos:
 | `eps` | `VARCHAR(100)` | Entidad promotora de salud. |
 | `telefono` | `VARCHAR(10)` | Número de contacto del paciente. |
 
-La persistencia permite conservar los registros después de reiniciar el microservicio. Además, los pacientes pueden ser consultados por otros servicios de MediRed IPS mediante los endpoints REST correspondientes.
+La persistencia permite conservar los registros después de reiniciar el microservicio.
+
+Además, los pacientes pueden ser consultados por otros servicios de MediRed IPS mediante los endpoints REST correspondientes.
+
+## Documentación y pruebas
+
+La carpeta `docs/` contiene la documentación complementaria del microservicio y los recursos necesarios para ejecutar pruebas.
+
+### Contrato REST
+
+Archivo:
+
+`docs/contrato-rest.md`
+
+Contiene la descripción de los endpoints, métodos HTTP, parámetros, cuerpos de solicitud, respuestas, códigos de estado, validaciones y permisos.
+
+### Colección de Postman
+
+Archivo:
+
+`docs/ms-pacientes.postman_collection.json`
+
+La colección permite ejecutar pruebas sobre los endpoints del microservicio, incluyendo:
+
+- Consulta general de pacientes.
+- Consulta individual por ID.
+- Consulta filtrada por EPS.
+- Consulta por lotes mediante `?ids=`.
+- Creación de pacientes.
+- Actualización de pacientes.
+- Eliminación de pacientes.
+- Validación de documentos duplicados.
+- Consulta de pacientes inexistentes.
+- Validación de autenticación JWT y permisos.
+
+Para utilizarla, importar el archivo JSON en Postman y configurar la URL base y un token JWT válido.
+
+URL base:
+
+`http://localhost:3002`
+
+Encabezado de autenticación:
+
+```http
+Authorization: Bearer <token>
+```
+
+## Pruebas realizadas
+
+El funcionamiento del CRUD se comprobó mediante solicitudes HTTP ejecutadas en Postman con un usuario autorizado.
+
+Las pruebas permitieron verificar las operaciones de consulta, creación, actualización y eliminación de pacientes, así como el manejo de documentos duplicados y registros inexistentes.
+
+| Prueba | Resultado esperado |
+|---|---|
+| GET `/pacientes?ids=3,13` | `200 OK` |
+| POST `/pacientes` | `201 Created` |
+| GET `/pacientes/18` | `200 OK` |
+| POST con documento duplicado | `409 Conflict` |
+| PUT `/pacientes/18` | `200 OK` |
+| DELETE `/pacientes/18` | `204 No Content` |
+| Segunda eliminación del mismo paciente | `404 Not Found` |
+
+Adicionalmente, la consulta por lotes permite que `ms-citas` y `ms-historias` recuperen varios pacientes mediante una sola petición HTTP.
+
+El registro de solicitudes en la terminal permite comprobar la recepción de estas consultas y verificar que no se realizan peticiones individuales innecesarias por cada identificador.
 
 ## Dependencias principales
 
 - **Express:** framework utilizado para construir el servidor y definir las rutas REST.
 - **mysql2:** paquete utilizado para establecer la conexión con MariaDB y ejecutar consultas SQL.
 - **JSON Web Token (JWT):** mecanismo de autenticación y verificación de permisos de acceso.
+- **dotenv:** permite cargar las variables de entorno del servicio.
 
 ## Estructura del proyecto
 
@@ -250,6 +493,10 @@ ms-pacientes/
 │
 ├── db/
 │   └── schema.sql
+│
+├── docs/
+│   ├── contrato-rest.md
+│   └── ms-pacientes.postman_collection.json
 │
 ├── src/
 │   ├── controllers/
@@ -279,6 +526,7 @@ ms-pacientes/
 │
 ├── .env
 ├── .gitignore
+├── README.md
 ├── package.json
 └── package-lock.json
 ```
