@@ -2,7 +2,7 @@
   "info": {
     "name": "MediRed IPS · ms-citas · pruebas reproducibles",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Taller 2, Módulo 3 · Santiago Mejía Suárez. Importar junto con README-POSTMAN.md. Ejecutar 00, 01 y 02 en orden sobre una base de pruebas. Las escrituras requieren permitirEscritura=true. Las carpetas 90–92 son manuales y se omiten por defecto. No contiene credenciales. Las colecciones anteriores se conservan como antecedentes."
+    "description": "MediRed IPS · Santiago Mejía Suárez. Importar con el environment Local o Gateway y seguir README-POSTMAN.md. Ejecutar 00, 01 y 02 en orden, una iteración, en la base de laboratorio. Login de tres roles, referencias y horarios automáticos, CRUD, validaciones, relaciones y limpieza. Los environments habilitan las escrituras de prueba. Las carpetas 03 y 90–92 se ejecutan por separado para recuperación y caída de Pacientes."
   },
   "auth": {
     "type": "bearer",
@@ -134,6 +134,46 @@
       "key": "modoLimpieza",
       "value": "false",
       "type": "string"
+    },
+    {
+      "key": "admisionesEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admisionesPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenAdmisiones",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "origenDatos",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaIdPropia",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaAuxIdPropia",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaReferenciasIdPropia",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "citaManualIdPropia",
+      "value": "",
+      "type": "string"
     }
   ],
   "event": [
@@ -142,6 +182,14 @@
       "script": {
         "type": "text/javascript",
         "exec": [
+          "const origen = JSON.stringify(['baseUrl', 'loginUrl', 'pacientesUrl', 'medicosUrl'].map(k => pm.variables.replaceIn(String(pm.variables.get(k) || '')).replace(/\\/$/, '')));",
+          "const pendientes = ['citaId', 'citaAuxId', 'citaReferenciasId', 'citaManualId'].some(k => pm.collectionVariables.get(k));",
+          "if (pendientes && pm.collectionVariables.get('origenDatos') !== origen) {",
+          "  pm.execution.setNextRequest(null);",
+          "  pm.execution.skipRequest();",
+          "  throw new Error('Hay citas pendientes de otro destino o de una versión anterior. Conserva la colección anterior para limpiarlas en su base original.');",
+          "}",
+          "pm.variables.set('tokenAdmisiones', pm.collectionVariables.get('tokenAdmisiones') || '');",
           "const generadas = [\"tokenAdmin\", \"tokenMedico\", \"citaId\", \"citaAuxId\", \"citaReferenciasId\", \"citaManualId\",",
           "  \"pacienteId\", \"medicoId\", \"citaInexistenteId\", \"pacienteInexistenteId\", \"fechaPrueba\", \"fechaAuxiliar\"];",
           "// Las variables producidas por los scripts tienen una sola fuente de verdad.",
@@ -193,6 +241,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "if (String(pm.variables.get('modoLimpieza')) !== 'true' && !pm.variables.get('modoFalloPacientes') && ['citaId', 'citaAuxId', 'citaReferenciasId'].some(k => pm.collectionVariables.get(k))) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Hay citas pendientes. Ejecuta la limpieza antes de iniciar otra corrida.');",
+                  "}",
                   "pm.collectionVariables.unset(\"tokenAdmin\");",
                   "pm.variables.set(\"tokenAdmin\", \"\");",
                   "const email = pm.variables.get(\"adminEmail\");",
@@ -295,6 +348,73 @@
               }
             }
           ]
+        },
+        {
+          "name": "Login admisiones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{loginUrl}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":{{emailJSON}},\"password\":{{passwordJSON}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset(\"tokenAdmisiones\");",
+                  "pm.variables.set(\"tokenAdmisiones\", \"\");",
+                  "const email = pm.variables.get(\"admisionesEmail\");",
+                  "const password = pm.variables.get(\"admisionesPassword\");",
+                  "if (!email || !password) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error(\"Configura admisionesEmail y admisionesPassword como valores locales del entorno.\");",
+                  "}",
+                  "pm.variables.set(\"emailJSON\", JSON.stringify(email));",
+                  "pm.variables.set(\"passwordJSON\", JSON.stringify(password));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "let sesion;",
+                  "try { sesion = pm.response.json(); } catch (_) {}",
+                  "const valida = pm.response.code === 200 && typeof sesion?.token === \"string\" &&",
+                  "  sesion.token.split(\".\").length === 3 && sesion.usuario?.rol === \"admisiones\";",
+                  "pm.test(\"JWT presente y rol admisiones\", () => pm.expect(valida).to.equal(true));",
+                  "if (valida) {",
+                  "  pm.collectionVariables.set(\"tokenAdmisiones\", sesion.token); pm.variables.set(\"tokenAdmisiones\", sesion.token);",
+                  "} else {",
+                  "  pm.collectionVariables.unset(\"tokenAdmisiones\");",
+                  "  pm.execution.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -339,7 +459,7 @@
                   "  pm.execution.setNextRequest(null);",
                   "} else {",
                   "  pm.collectionVariables.set(\"pacienteId\", registros[0].id); pm.variables.set(\"pacienteId\", registros[0].id);",
-                  "  pm.collectionVariables.set(\"pacienteInexistenteId\", Math.max(...registros.map(r => r.id)) + 1); pm.variables.set(\"pacienteInexistenteId\", Math.max(...registros.map(r => r.id)) + 1);",
+                  "  pm.collectionVariables.set(\"pacienteInexistenteId\", Math.max(...registros.map(r => r.id)) + 1000000); pm.variables.set(\"pacienteInexistenteId\", Math.max(...registros.map(r => r.id)) + 1000000);",
                   "}"
                 ]
               }
@@ -441,7 +561,7 @@
                   "  }",
                   "  pm.collectionVariables.set(\"fechaPrueba\", horarios[0]); pm.variables.set(\"fechaPrueba\", horarios[0]);",
                   "  pm.collectionVariables.set(\"fechaAuxiliar\", horarios[1]); pm.variables.set(\"fechaAuxiliar\", horarios[1]);",
-                  "  pm.collectionVariables.set(\"citaInexistenteId\", Math.max(0, ...citas.map(c => c.id)) + 1); pm.variables.set(\"citaInexistenteId\", Math.max(0, ...citas.map(c => c.id)) + 1);",
+                  "  pm.collectionVariables.set(\"citaInexistenteId\", Math.max(0, ...citas.map(c => c.id)) + 1000000); pm.variables.set(\"citaInexistenteId\", Math.max(0, ...citas.map(c => c.id)) + 1000000);",
                   "}"
                 ]
               }
@@ -466,6 +586,18 @@
             }
           },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('healthUrl')) {",
+                  "  console.warn('Health omitido. Consultar /health directamente en el servidor de ms-citas.');",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -754,7 +886,7 @@
               }
             ],
             "url": "{{baseUrl}}/citas",
-            "description": "Crea un registro propio en la base de pruebas y conserva su ID para la limpieza. Requiere permitirEscritura=true.",
+            "description": "Crea un registro propio en la base de pruebas y conserva su ID para la limpieza. Requiere permitirEscritura=true. Ejecutada como Admisiones.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
@@ -763,6 +895,16 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmisiones}}",
+                  "type": "string"
+                }
+              ]
             }
           },
           "event": [
@@ -799,6 +941,9 @@
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
                   "  pm.collectionVariables.set(\"citaId\", pm.response.json().id); pm.variables.set(\"citaId\", pm.response.json().id);",
+                  "  pm.collectionVariables.set('origenDatos', JSON.stringify(['baseUrl', 'loginUrl', 'pacientesUrl', 'medicosUrl'].map(k => pm.variables.replaceIn(String(pm.variables.get(k) || '')).replace(/\\/$/, ''))));",
+                  "  const propia = pm.response.json();",
+                  "  pm.collectionVariables.set('citaIdPropia', JSON.stringify({paciente_id: propia.paciente_id, medico_id: propia.medico_id, fecha_hora: propia.fecha_hora}));",
                   "}",
                   "pm.test(\"Contrato y relaciones de la cita\", () => {",
                   "  const cita = pm.response.json();",
@@ -1068,6 +1213,9 @@
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
                   "  pm.collectionVariables.set(\"citaAuxId\", pm.response.json().id); pm.variables.set(\"citaAuxId\", pm.response.json().id);",
+                  "  pm.collectionVariables.set('origenDatos', JSON.stringify(['baseUrl', 'loginUrl', 'pacientesUrl', 'medicosUrl'].map(k => pm.variables.replaceIn(String(pm.variables.get(k) || '')).replace(/\\/$/, ''))));",
+                  "  const propia = pm.response.json();",
+                  "  pm.collectionVariables.set('citaAuxIdPropia', JSON.stringify({paciente_id: propia.paciente_id, medico_id: propia.medico_id, fecha_hora: propia.fecha_hora}));",
                   "}",
                   "pm.test(\"Contrato y relaciones de la cita\", () => {",
                   "  const cita = pm.response.json();",
@@ -1161,7 +1309,7 @@
               }
             ],
             "url": "{{baseUrl}}/citas/{{citaId}}",
-            "description": "",
+            "description": " Ejecutada como Admisiones.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Bogotá\",\n  \"estado\": \"atendida\"\n}",
@@ -1170,6 +1318,16 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmisiones}}",
+                  "type": "string"
+                }
+              ]
             }
           },
           "event": [
@@ -1226,7 +1384,7 @@
               }
             ],
             "url": "{{baseUrl}}/citas/{{citaId}}",
-            "description": "",
+            "description": " Ejecutada como Admisiones.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"paciente_id\": {{pacienteId}},\n  \"medico_id\": {{medicoId}},\n  \"fecha_hora\": \"{{fechaPrueba}}\",\n  \"sede\": \"Cali\",\n  \"estado\": \"programada\"\n}",
@@ -1235,6 +1393,16 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmisiones}}",
+                  "type": "string"
+                }
+              ]
             }
           },
           "event": [
@@ -1397,6 +1565,9 @@
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
                   "  pm.collectionVariables.set(\"citaReferenciasId\", pm.response.json().id); pm.variables.set(\"citaReferenciasId\", pm.response.json().id);",
+                  "  pm.collectionVariables.set('origenDatos', JSON.stringify(['baseUrl', 'loginUrl', 'pacientesUrl', 'medicosUrl'].map(k => pm.variables.replaceIn(String(pm.variables.get(k) || '')).replace(/\\/$/, ''))));",
+                  "  const propia = pm.response.json();",
+                  "  pm.collectionVariables.set('citaReferenciasIdPropia', JSON.stringify({paciente_id: propia.paciente_id, medico_id: propia.medico_id, fecha_hora: propia.fecha_hora}));",
                   "}",
                   "pm.test(\"Contrato y relaciones de la cita\", () => {",
                   "  const cita = pm.response.json();",
@@ -1645,7 +1816,17 @@
             "method": "DELETE",
             "header": [],
             "url": "{{baseUrl}}/citas/{{citaId}}",
-            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204."
+            "description": "Elimina exclusivamente el ID capturado al crear una cita en esta colección. Una respuesta 404 permite descartar el ID local, pero sigue siendo un fallo del caso 204. Ejecutada como Admisiones.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmisiones}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "event": [
             {
@@ -1656,7 +1837,23 @@
                   "if (!pm.collectionVariables.get(\"citaId\")) {",
                   "  pm.execution.skipRequest();",
                   "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
-                  "}"
+                  "}",
+                  "const guardada = pm.collectionVariables.get('citaIdPropia');",
+                  "if (!guardada) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Falta la identificación de la cita propia. Revisar la ejecución original.');",
+                  "}",
+                  "pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin')}}, (error, respuesta) => {",
+                  "  const propia = JSON.parse(guardada);",
+                  "  const valida = !error && (respuesta.code === 404 || (respuesta.code === 200 && Object.keys(propia).every(k => respuesta.json()[k] === propia[k])));",
+                  "  pm.test('Destino y atributos de la cita propia verificados', () => pm.expect(valida).to.equal(true));",
+                  "  if (!valida) {",
+                  "    pm.execution.setNextRequest(null);",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('La consulta previa no confirma la cita propia. Revisar antes de limpiar.');",
+                  "  }",
+                  "});"
                 ]
               }
             },
@@ -1681,7 +1878,17 @@
             "method": "DELETE",
             "header": [],
             "url": "{{baseUrl}}/citas/{{citaId}}",
-            "description": ""
+            "description": " Ejecutada como Admisiones.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmisiones}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "event": [
             {
@@ -1729,7 +1936,23 @@
                   "if (!pm.collectionVariables.get(\"citaAuxId\")) {",
                   "  pm.execution.skipRequest();",
                   "  throw new Error(\"Falta citaAuxId. Ejecuta primero la preparación y creación correspondientes.\");",
-                  "}"
+                  "}",
+                  "const guardada = pm.collectionVariables.get('citaAuxIdPropia');",
+                  "if (!guardada) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Falta la identificación de la cita propia. Revisar la ejecución original.');",
+                  "}",
+                  "pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin')}}, (error, respuesta) => {",
+                  "  const propia = JSON.parse(guardada);",
+                  "  const valida = !error && (respuesta.code === 404 || (respuesta.code === 200 && Object.keys(propia).every(k => respuesta.json()[k] === propia[k])));",
+                  "  pm.test('Destino y atributos de la cita propia verificados', () => pm.expect(valida).to.equal(true));",
+                  "  if (!valida) {",
+                  "    pm.execution.setNextRequest(null);",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('La consulta previa no confirma la cita propia. Revisar antes de limpiar.');",
+                  "  }",
+                  "});"
                 ]
               }
             },
@@ -1765,7 +1988,23 @@
                   "if (!pm.collectionVariables.get(\"citaReferenciasId\")) {",
                   "  pm.execution.skipRequest();",
                   "  throw new Error(\"Falta citaReferenciasId. Ejecuta primero la preparación y creación correspondientes.\");",
-                  "}"
+                  "}",
+                  "const guardada = pm.collectionVariables.get('citaReferenciasIdPropia');",
+                  "if (!guardada) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Falta la identificación de la cita propia. Revisar la ejecución original.');",
+                  "}",
+                  "pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin')}}, (error, respuesta) => {",
+                  "  const propia = JSON.parse(guardada);",
+                  "  const valida = !error && (respuesta.code === 404 || (respuesta.code === 200 && Object.keys(propia).every(k => respuesta.json()[k] === propia[k])));",
+                  "  pm.test('Destino y atributos de la cita propia verificados', () => pm.expect(valida).to.equal(true));",
+                  "  if (!valida) {",
+                  "    pm.execution.setNextRequest(null);",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('La consulta previa no confirma la cita propia. Revisar antes de limpiar.');",
+                  "  }",
+                  "});"
                 ]
               }
             },
@@ -1818,7 +2057,23 @@
                   "if (!pm.collectionVariables.get(\"citaId\")) {",
                   "  pm.execution.skipRequest();",
                   "  throw new Error(\"Falta citaId. Ejecuta primero la preparación y creación correspondientes.\");",
-                  "}"
+                  "}",
+                  "const guardada = pm.collectionVariables.get('citaIdPropia');",
+                  "if (!guardada) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Falta la identificación de la cita propia. Revisar la ejecución original.');",
+                  "}",
+                  "pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin')}}, (error, respuesta) => {",
+                  "  const propia = JSON.parse(guardada);",
+                  "  const valida = !error && (respuesta.code === 404 || (respuesta.code === 200 && Object.keys(propia).every(k => respuesta.json()[k] === propia[k])));",
+                  "  pm.test('Destino y atributos de la cita propia verificados', () => pm.expect(valida).to.equal(true));",
+                  "  if (!valida) {",
+                  "    pm.execution.setNextRequest(null);",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('La consulta previa no confirma la cita propia. Revisar antes de limpiar.');",
+                  "  }",
+                  "});"
                 ]
               }
             },
@@ -1854,7 +2109,23 @@
                   "if (!pm.collectionVariables.get(\"citaAuxId\")) {",
                   "  pm.execution.skipRequest();",
                   "  throw new Error(\"Falta citaAuxId. Ejecuta primero la preparación y creación correspondientes.\");",
-                  "}"
+                  "}",
+                  "const guardada = pm.collectionVariables.get('citaAuxIdPropia');",
+                  "if (!guardada) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Falta la identificación de la cita propia. Revisar la ejecución original.');",
+                  "}",
+                  "pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin')}}, (error, respuesta) => {",
+                  "  const propia = JSON.parse(guardada);",
+                  "  const valida = !error && (respuesta.code === 404 || (respuesta.code === 200 && Object.keys(propia).every(k => respuesta.json()[k] === propia[k])));",
+                  "  pm.test('Destino y atributos de la cita propia verificados', () => pm.expect(valida).to.equal(true));",
+                  "  if (!valida) {",
+                  "    pm.execution.setNextRequest(null);",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('La consulta previa no confirma la cita propia. Revisar antes de limpiar.');",
+                  "  }",
+                  "});"
                 ]
               }
             },
@@ -1890,7 +2161,23 @@
                   "if (!pm.collectionVariables.get(\"citaReferenciasId\")) {",
                   "  pm.execution.skipRequest();",
                   "  throw new Error(\"Falta citaReferenciasId. Ejecuta primero la preparación y creación correspondientes.\");",
-                  "}"
+                  "}",
+                  "const guardada = pm.collectionVariables.get('citaReferenciasIdPropia');",
+                  "if (!guardada) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Falta la identificación de la cita propia. Revisar la ejecución original.');",
+                  "}",
+                  "pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin')}}, (error, respuesta) => {",
+                  "  const propia = JSON.parse(guardada);",
+                  "  const valida = !error && (respuesta.code === 404 || (respuesta.code === 200 && Object.keys(propia).every(k => respuesta.json()[k] === propia[k])));",
+                  "  pm.test('Destino y atributos de la cita propia verificados', () => pm.expect(valida).to.equal(true));",
+                  "  if (!valida) {",
+                  "    pm.execution.setNextRequest(null);",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('La consulta previa no confirma la cita propia. Revisar antes de limpiar.');",
+                  "  }",
+                  "});"
                 ]
               }
             },
@@ -1982,6 +2269,9 @@
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "if (pm.response.code === 201 && Number.isInteger(pm.response.json().id) && pm.response.json().id > 0) {",
                   "  pm.collectionVariables.set(\"citaManualId\", pm.response.json().id); pm.variables.set(\"citaManualId\", pm.response.json().id);",
+                  "  pm.collectionVariables.set('origenDatos', JSON.stringify(['baseUrl', 'loginUrl', 'pacientesUrl', 'medicosUrl'].map(k => pm.variables.replaceIn(String(pm.variables.get(k) || '')).replace(/\\/$/, ''))));",
+                  "  const propia = pm.response.json();",
+                  "  pm.collectionVariables.set('citaManualIdPropia', JSON.stringify({paciente_id: propia.paciente_id, medico_id: propia.medico_id, fecha_hora: propia.fecha_hora}));",
                   "}",
                   "pm.test(\"Contrato y relaciones de la cita\", () => {",
                   "  const cita = pm.response.json();",
@@ -2163,7 +2453,23 @@
                   "if (!pm.collectionVariables.get(\"citaManualId\")) {",
                   "  pm.execution.skipRequest();",
                   "  throw new Error(\"Falta citaManualId. Ejecuta primero la preparación y creación correspondientes.\");",
-                  "}"
+                  "}",
+                  "const guardada = pm.collectionVariables.get('citaManualIdPropia');",
+                  "if (!guardada) {",
+                  "  pm.execution.setNextRequest(null);",
+                  "  pm.execution.skipRequest();",
+                  "  throw new Error('Falta la identificación de la cita propia. Revisar la ejecución original.');",
+                  "}",
+                  "pm.sendRequest({url: pm.variables.replaceIn(pm.request.url.toString()), method: 'GET', header: {Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin')}}, (error, respuesta) => {",
+                  "  const propia = JSON.parse(guardada);",
+                  "  const valida = !error && (respuesta.code === 404 || (respuesta.code === 200 && Object.keys(propia).every(k => respuesta.json()[k] === propia[k])));",
+                  "  pm.test('Destino y atributos de la cita propia verificados', () => pm.expect(valida).to.equal(true));",
+                  "  if (!valida) {",
+                  "    pm.execution.setNextRequest(null);",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('La consulta previa no confirma la cita propia. Revisar antes de limpiar.');",
+                  "  }",
+                  "});"
                 ]
               }
             },

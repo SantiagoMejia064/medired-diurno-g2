@@ -1,0 +1,341 @@
+{
+  "info": {
+    "name": "MediRed IPS - Usuarios - Acceso para Citas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Preparación opcional de cuentas para Citas, adaptada del paquete de Historias. Seleccionar el environment Local o Gateway. Ejecutar con Send login Administrador, listar cuentas y crear solo las que falten. Después verificar los logins de Médico y Admisiones. Las cuentas nuevas requieren contraseña de al menos ocho caracteres."
+  },
+  "item": [
+    {
+      "name": "01 - Preparar cuentas solo si faltan",
+      "item": [
+        {
+          "name": "Login Administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuariosUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": {{adminEmailJSON}},\n  \"password\": {{adminPasswordJSON}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('tokenAdmin'); pm.variables.set('tokenAdmin', '');",
+                  "pm.variables.set('adminEmailJSON', JSON.stringify(pm.variables.get('adminEmail') || ''));",
+                  "pm.variables.set('adminPasswordJSON', JSON.stringify(pm.variables.get('adminPassword') || ''));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Rol y token válidos\", () => { pm.expect(data.usuario.rol).to.equal(\"administrador\"); pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "  if (data.usuario?.rol === \"administrador\" && typeof data.token === \"string\" && data.token) pm.collectionVariables.set(\"tokenAdmin\", data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar cuentas como Administrador",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usuariosUrl}}/usuarios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear Médico solo si falta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuariosUrl}}/usuarios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Médico de prueba\",\n  \"email\": {{medicoEmailJSON}},\n  \"password\": {{medicoPasswordJSON}},\n  \"rol\": \"medico\",\n  \"activo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Ejecutar con Send únicamente si la cuenta no existe. No cambia contraseñas de cuentas existentes. 409 indica correo duplicado; no demuestra conocer su contraseña."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('medicoEmailJSON', JSON.stringify(pm.variables.get('medicoEmail') || ''));",
+                  "pm.variables.set('medicoPasswordJSON', JSON.stringify(pm.variables.get('medicoPassword') || ''));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear Admisiones solo si falta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuariosUrl}}/usuarios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Admisiones de prueba\",\n  \"email\": {{admisionesEmailJSON}},\n  \"password\": {{admisionesPasswordJSON}},\n  \"rol\": \"admisiones\",\n  \"activo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Ejecutar con Send únicamente si la cuenta no existe. No cambia contraseñas de cuentas existentes. 409 indica correo duplicado; no demuestra conocer su contraseña."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('admisionesEmailJSON', JSON.stringify(pm.variables.get('admisionesEmail') || ''));",
+                  "pm.variables.set('admisionesPasswordJSON', JSON.stringify(pm.variables.get('admisionesPassword') || ''));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Verificar accesos",
+      "item": [
+        {
+          "name": "Login Médico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuariosUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": {{medicoEmailJSON}},\n  \"password\": {{medicoPasswordJSON}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('tokenMedico'); pm.variables.set('tokenMedico', '');",
+                  "pm.variables.set('medicoEmailJSON', JSON.stringify(pm.variables.get('medicoEmail') || ''));",
+                  "pm.variables.set('medicoPasswordJSON', JSON.stringify(pm.variables.get('medicoPassword') || ''));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Rol y token válidos\", () => { pm.expect(data.usuario.rol).to.equal(\"medico\"); pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "  if (data.usuario?.rol === \"medico\" && typeof data.token === \"string\" && data.token) pm.collectionVariables.set(\"tokenMedico\", data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Admisiones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{usuariosUrl}}/usuarios/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": {{admisionesEmailJSON}},\n  \"password\": {{admisionesPasswordJSON}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('tokenAdmisiones'); pm.variables.set('tokenAdmisiones', '');",
+                  "pm.variables.set('admisionesEmailJSON', JSON.stringify(pm.variables.get('admisionesEmail') || ''));",
+                  "pm.variables.set('admisionesPasswordJSON', JSON.stringify(pm.variables.get('admisionesPassword') || ''));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.test(\"Rol y token válidos\", () => { pm.expect(data.usuario.rol).to.equal(\"admisiones\"); pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "  if (data.usuario?.rol === \"admisiones\" && typeof data.token === \"string\" && data.token) pm.collectionVariables.set(\"tokenAdmisiones\", data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.variables.set('usuariosUrl', String(pm.variables.get('loginUrl')).replace(/\\/usuarios\\/login\\/?$/, ''));",
+          "for (const key of ['tokenAdmin', 'tokenMedico', 'tokenAdmisiones']) pm.variables.set(key, pm.collectionVariables.get(key) || '');"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "tokenAdmin",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenMedico",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenAdmisiones",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

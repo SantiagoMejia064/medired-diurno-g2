@@ -5,6 +5,19 @@ Esta guía acompaña la colección canónica
 en formato Postman Collection v2.1. Santiago Mejía Suárez es responsable de ms-citas.
 Las dos colecciones anteriores se conservan como antecedentes.
 
+Importar también uno de los environments listos para usar, siguiendo el modelo
+del paquete de Historias.
+
+- [Local](MediRed-Citas-Local.postman_environment.json), con puertos 3001 a 3004.
+- [Gateway](MediRed-Citas-Gateway.postman_environment.json), con `http://app.medired.com/api`.
+- [Preparación opcional de cuentas](ms-usuarios-acceso-citas.postman_collection.json),
+  adaptada de Historias y compatible con estos environments.
+
+Los environments habilitan `permitirEscritura=true` para el CRUD del laboratorio.
+Las contraseñas vienen vacías y marcadas como sensibles. Completar las tres cuentas
+antes de ejecutar. Los correos son ejemplos editables. Los tokens e IDs se generan
+automáticamente dentro de cada colección.
+
 ## Preparar otro computador
 
 1. Instalar una versión actual de Postman Desktop que admita
@@ -13,8 +26,8 @@ Las dos colecciones anteriores se conservan como antecedentes.
 2. Disponer de ms-usuarios, ms-citas, ms-pacientes y ms-medicos, sus bases de datos
    de pruebas y un `JWT_SECRET` compartido. Seguir las instrucciones de instalación
    existentes en cada servicio.
-3. Preparar dos cuentas activas de prueba en ms-usuarios, una con rol
-   `administrador` y otra con rol `medico`. Obtener sus credenciales de la persona
+3. Preparar tres cuentas activas de prueba en ms-usuarios, una con rol
+   `administrador`, otra con rol `medico` y otra con rol `admisiones`. Obtener sus credenciales de la persona
    responsable del entorno. La colección utiliza cuentas existentes.
 4. Tener al menos un paciente y un médico registrados. La preparación consulta
    sus listados, selecciona una referencia de cada uno y calcula un paciente
@@ -31,7 +44,7 @@ proveedores en producción. La colección exportada trae
 
 ## Variables y credenciales
 
-Crear y seleccionar un entorno de Postman. Introducir las credenciales como
+Importar y seleccionar el environment Local o Gateway de este paquete. Introducir las credenciales como
 valores locales, marcando las contraseñas como sensibles. Mantener vacíos los
 valores compartidos y evitar exportar el entorno con secretos.
 
@@ -44,6 +57,7 @@ valores compartidos y evitar exportar el entorno con secretos.
 | `healthUrl` | URL completa y accesible de `GET /health` de ms-citas. |
 | `adminEmail`, `adminPassword` | Credenciales locales de la cuenta administradora de prueba. |
 | `medicoEmail`, `medicoPassword` | Credenciales locales de la cuenta médica de prueba. |
+| `admisionesEmail`, `admisionesPassword` | Credenciales locales de la cuenta de Admisiones. |
 | `permitirEscritura` | `true` para autorizar las pruebas POST/PUT/DELETE. El login siempre está habilitado. |
 | `modoLimpieza` | `false` normalmente. `true` solo para limpiar una ejecución interrumpida. |
 | `modoFalloPacientes` | Vacío normalmente. Admite `preparar`, `detenido` o `limpiar` durante la comprobación manual. |
@@ -54,7 +68,7 @@ registros existentes para utilizarlos como citas de prueba.
 
 | Variables generadas | Uso |
 | --- | --- |
-| `tokenAdmin`, `tokenMedico` | JWT obtenidos mediante login. |
+| `tokenAdmin`, `tokenMedico`, `tokenAdmisiones` | JWT obtenidos mediante login. |
 | `pacienteId`, `medicoId` | Referencias seleccionadas en los listados de proveedores. |
 | `pacienteInexistenteId`, `citaInexistenteId` | IDs calculados para los casos negativos. |
 | `fechaPrueba`, `fechaAuxiliar` | Dos horarios futuros libres para el mismo médico. |
@@ -71,11 +85,11 @@ reemplace el ID o token recién obtenido.
 
 | Variable | Valor |
 | --- | --- |
-| `baseUrl` | `http://localhost:3004` |
-| `loginUrl` | `http://localhost:3001/usuarios/login` |
-| `pacientesUrl` | `http://localhost:3002` |
-| `medicosUrl` | `http://localhost:3003` |
-| `healthUrl` | `http://localhost:3004/health` |
+| `baseUrl` | `http://127.0.0.1:3004` |
+| `loginUrl` | `http://127.0.0.1:3001/usuarios/login` |
+| `pacientesUrl` | `http://127.0.0.1:3002` |
+| `medicosUrl` | `http://127.0.0.1:3003` |
+| `healthUrl` | `http://127.0.0.1:3004/health` |
 
 ### Entorno por Gateway Apache
 
@@ -96,7 +110,7 @@ La configuración actual de Apache publica los recursos `/api/usuarios`,
 No publica `/api/health`. Por eso `healthUrl` es independiente.
 Configurar una dirección de salud accesible desde el equipo que ejecuta Postman,
 por ejemplo mediante un túnel autorizado al puerto local del servicio.
-Si no existe ese acceso, desmarcar **Health público** en el Runner y comprobar
+Si no existe ese acceso, dejar `healthUrl` vacío. **Health público** se omite automáticamente. Comprobar
 `GET /health` desde el servidor de aplicaciones. Registrar esa omisión en el
 resultado.
 
@@ -123,7 +137,7 @@ Las primeras solicitudes envían `email` y `password` a
 formato JWT y `usuario.rol`. Solo entonces guarda el token de colección.
 Un login fallido limpia su token y detiene el Runner.
 
-Las peticiones heredan Bearer `{{tokenAdmin}}`, salvo los casos de médico,
+Las peticiones heredan Bearer `{{tokenAdmin}}`. Admisiones ejecuta crear, actualizar y eliminar la cita principal. Se usan tokens específicos en los casos de médico,
 token inválido y acceso público. Los casos sin token utilizan explícitamente
 **No Auth**, evitando la autenticación heredada.
 
@@ -176,6 +190,15 @@ Después devolver `modoLimpieza=false` y repetir el recorrido normal.
 La cita manual se limpia mediante la carpeta 92.
 
 Los IDs generados deben permanecer asociados al mismo entorno y base de datos.
+La colección guarda las cuatro URLs al crear una cita y detiene la ejecución si
+cambian mientras hay IDs pendientes. Una nueva corrida normal también se detiene
+si quedan citas pendientes. Al recuperar, activar primero `modoLimpieza=true` y
+ejecutar los logins para renovar los tokens.
+
+Antes de cada eliminación propia, una consulta GET verifica paciente, médico y
+fecha contra los atributos capturados al crear. Una diferencia detiene el Runner.
+Conservar la colección anterior para limpiar registros creados por una versión
+previa que todavía no guardaba estos atributos.
 Antes de cambiar entre local y Gateway, completar la limpieza y vaciar las
 variables generadas. Una pérdida de conexión justo después de un POST puede
 impedir capturar el ID. En ese caso, el responsable del laboratorio debe revisar
@@ -223,3 +246,53 @@ la comprobación de MySQL y del despliegue real.
 
 La omisión condicional utiliza la API documentada por Postman.
 [Referencia oficial de pm.execution](https://learning.postman.com/docs/tests-and-scripts/write-scripts/postman-sandbox-reference/pm-execution/)
+
+
+## Preparar cuentas faltantes
+
+Seleccionar el mismo environment en la colección opcional de Usuarios. Con
+**Send**, ejecutar el login administrador y el listado. Crear Médico o Admisiones
+solo si falta la cuenta, con las credenciales configuradas en el environment y una
+contraseña de al menos ocho caracteres. Verificar después los dos logins. Ejecutar
+esta preparación petición por petición. Un 409 al crear indica correo registrado
+y requiere utilizar la contraseña vigente.
+
+Para el primer administrador, seguir [Usuarios](../../ms-usuarios/README.md).
+En una base existente se necesitan sus credenciales vigentes. Los nombres para
+las cuentas nuevas se pueden editar en el cuerpo de las peticiones opcionales.
+
+## Ejecución por terminal
+
+Desde la raíz del repositorio, con Postman CLI instalado, utilizar una copia
+privada del environment con las credenciales del laboratorio. Sustituir su ruta
+en este comando.
+
+```bash
+postman collection run ms-citas/docs/MediRed-IPS-ms-citas.postman_collection.json -e /ruta/privada/Citas.postman_environment.json -i "00 - Autenticación" -i "01 - Preparación de datos" -i "02 - Pruebas normales" --no-report-events
+```
+
+El comando devuelve un código distinto de cero cuando fallan aserciones. Revisar
+también errores de scripts y omisiones. Una corrida CLI interrumpida puede requerir
+localizar sus registros en la base de laboratorio. Para recuperación con IDs
+conservados entre ejecuciones, utilizar el Runner de Postman Desktop.
+
+## Verificación de esta actualización
+
+Se ejecutó dos veces la corrida normal con Postman CLI contra las aplicaciones
+Express del repositorio, usando cuentas y repositorios temporales en memoria.
+Cada corrida pasó 83 aserciones con cero fallos, código de salida 0 y cero citas
+restantes. Se ejercitaron autenticación, rutas, lógica de negocio y clientes HTTP
+entre Usuarios, Pacientes, Médicos y Citas.
+
+Se corrigió el ID inexistente calculado como máximo más uno, porque podía quedar
+ocupado por las creaciones de la propia corrida antes de probar el PUT 404.
+Ahora se calcula con un margen de un millón sobre los IDs observados.
+
+También se verificó la preparación opcional de cuentas contra Usuarios con un
+repositorio temporal, incluyendo creación y login de Médico y Admisiones, con 9 aserciones aprobadas.
+Se comprobaron los scripts y los bloqueos por cambio de destino y atributos de
+una cita distinta antes de limpiar.
+
+Quedan por comprobar MySQL, Apache, conectividad con las VMs y las carpetas de
+caída en el laboratorio del equipo. Gateway omite Health y tiene dos aserciones
+menos.

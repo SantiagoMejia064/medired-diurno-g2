@@ -281,12 +281,28 @@ Las citas se almacenan en MySQL, dentro de la base de datos `citas_db`. El repos
 Los datos permanecen almacenados después de reiniciar el microservicio. Se comprobó el funcionamiento del CRUD y las reglas de negocio mediante Postman y MySQL Workbench.
 
 La colección canónica es [MediRed-IPS-ms-citas.postman_collection.json](docs/MediRed-IPS-ms-citas.postman_collection.json).
-Incorpora login de administrador y médico, URLs y credenciales mediante variables,
+Incorpora login de administrador, médico y admisiones, URLs y credenciales mediante variables,
 captura automática de tokens e IDs, fechas futuras dinámicas y pruebas del CRUD,
 validaciones, permisos y relaciones REST.
 
 La [guía de Postman](docs/README-POSTMAN.md) explica la importación, la configuración
-local o por Gateway, los datos necesarios y el orden de ejecución. Las escrituras
+local o por Gateway, los datos necesarios y el orden de ejecución.
+Importar uno de los environments [Local](docs/MediRed-Citas-Local.postman_environment.json)
+o [Gateway](docs/MediRed-Citas-Gateway.postman_environment.json), completar las
+credenciales locales de las tres cuentas y ejecutar las carpetas 00, 01 y 02 en
+orden. Ambos environments habilitan `permitirEscritura=true` para el laboratorio.
+Los logins capturan tokens automáticamente y la preparación obtiene referencias
+y horarios futuros libres. Admisiones prueba el CRUD principal y Administrador
+los registros auxiliares. La limpieza comprueba destino y atributos propios antes
+de borrar. Gateway omite Health cuando su URL está vacía.
+
+La [colección opcional de cuentas](docs/ms-usuarios-acceso-citas.postman_collection.json)
+permite preparar Médico y Admisiones con un administrador existente. La guía
+explica su ejecución petición por petición y el comando para pruebas por terminal.
+
+La corrida normal pasó dos veces con Postman CLI, 83 aserciones y cero fallos por
+corrida, utilizando las aplicaciones Express y repositorios temporales en memoria.
+La comprobación con MySQL, Apache y las VMs del equipo queda pendiente. Las escrituras
 requieren una base de pruebas o autorización explícita y activar
 `permitirEscritura=true`. Los casos con un proveedor detenido se ejecutan por
 separado en un laboratorio autorizado.
