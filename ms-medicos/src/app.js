@@ -9,8 +9,18 @@ const app = express();
 
 // Middleware: convierte el cuerpo JSON de la petición en un objeto (req.body)
 app.use(express.json());
+
 app.use((req, res, next) => {
-  console.log(`[ms-medicos] ${req.method} ${req.originalUrl}`);
+  const inicio = Date.now();
+
+  res.on('finish', () => {
+    const duracion = Date.now() - inicio;
+
+    console.log(
+      `[ms-medicos] ${req.method} ${req.path} - HTTP ${res.statusCode} - ${duracion}ms`
+    );
+  });
+
   next();
 });
 
@@ -19,7 +29,7 @@ app.get('/health', (req, res) => {
   res.json({ servicio: 'ms-medicos', estado: 'ok' });
 });
 
-// Rutas del recurso. Todas las URIs de este microservicio empiezan por /usuarios
+// Rutas del recurso. Todas las URIs de este microservicio empiezan por /medicos
 app.use('/medicos', medicosRoutes);
 
 // Cualquier otra ruta: 404 Not Found
